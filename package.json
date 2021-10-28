@@ -1,0 +1,26 @@
+{
+  "name": "angelos",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jestyarn"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/preset-env": "^7.15.8",
+    "@babel/preset-typescript": "^7.15.0",
+    "@cloudflare/types": "^6.10.0",
+    "@types/jest": "^27.0.2",
+    "jest": "^27.3.1",
+    "msw": "^0.35.0",
+    "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "axios": "^0.24.0",
+    "node-docker-api": "^1.1.22",
+    "ts-node": "^10.4.0",
+    "tslog": "^3.2.2"
+  }
+}
