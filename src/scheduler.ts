@@ -21,7 +21,7 @@ const makeScheduler = (logger: Logger, deleteRecordDelayInSeconds: number) => {
       }, deleteRecordDelayInSeconds * 1000);
 
       jobsRegistry.set(opts.jobId, { type: opts.type, jobId: opts.jobId, timerId });
-      logger.info("[Schedule Job]", opts.type, `Job with id="${opts.jobId}" has been scheduled`);
+      logger.info("[Schedule Job]", opts.type, `Job with id="${opts.jobId}" has been scheduled and will be executed in ${deleteRecordDelayInSeconds} seconds`);
     },
 
     scheduleIntervalJob: (opts: {
@@ -33,14 +33,14 @@ const makeScheduler = (logger: Logger, deleteRecordDelayInSeconds: number) => {
       const timerId = setInterval(async () => {
         logger.info("[Run Job]", opts.type, `Job with id="${opts.jobId}" has been executed`);
         await opts.fn();
-      }, opts.intervalTimeInSeconds);
+      }, opts.intervalTimeInSeconds * 1000);
 
       jobsRegistry.set(opts.jobId, { type: opts.type, jobId: opts.jobId, timerId });
 
       logger.info(
         "[Schedule Interval Job]",
         opts.type,
-        `Job with id="${opts.jobId}" has been scheduled`
+        `Job with id="${opts.jobId}" has been scheduled every ${opts.intervalTimeInSeconds} seconds`
       );
     },
 

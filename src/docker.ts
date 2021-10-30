@@ -1,5 +1,6 @@
-import axios, { Axios } from "axios";
+import { Axios } from "axios";
 import type { Logger } from "tslog";
+import { getAxiosInstance } from "./utils";
 
 type Container = {
   Id: string;
@@ -27,17 +28,25 @@ export class DockerApi {
     private dockerLabelHostname: string,
     private dockerLabelEnable: string
   ) {
-    this.client = axios.create({
+    this.client = getAxiosInstance(logger, {
       socketPath: sock,
       baseURL: dockerApiHost,
     });
   }
 
   getContainers = async () => {
-    const client = await this.client.get("/containers/json");
+    const client = await this.client.get<Container[]>("/containers/json");
 
-    const containers = client.data as Container[];
-    return containers.filter((c) => c.Labels[this.dockerLabelHostname]);
+    const containers = client.data.filter((c) => c.Labels[this.dockerLabelHostname]);
+
+    this.logger.debug(
+      "[Get Docker Containers]",
+      containers.map((c) => [c.Id, c.Labels[this.dockerLabelHostname]])
+    );
+
+    this.logger.silly("[Get Docker Containers Raw]", client.data);
+
+    return containers;
   };
 
   getDockerContainerHosts = async () => {

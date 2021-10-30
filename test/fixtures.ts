@@ -104,7 +104,7 @@ export const getCloudflareMock = ({ id, name, type }: DNSRecordMock): DNSRecord 
 });
 
 export const getCloudflareRecordsMock = (data: DNSRecordMock[]) => ({
-  results: data.map((d) => getCloudflareMock(d)),
+  result: data.map((d) => getCloudflareMock(d)),
   success: true,
   errors: [],
   messages: [],

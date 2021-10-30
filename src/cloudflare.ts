@@ -1,6 +1,13 @@
-import axios, { Axios } from "axios";
+import { Axios } from "axios";
 import type { Logger } from "tslog";
 import type { DNSRecord } from "@cloudflare/types";
+import { getAxiosInstance } from "./utils";
+
+type CloudflareResponse<T> = {
+  success: boolean;
+  errors: { code: number; message: string };
+  result: T;
+};
 
 export class CloudflareApi {
   private client: Axios;
@@ -11,7 +18,7 @@ export class CloudflareApi {
     private zone: string,
     private tunnelUrl: string
   ) {
-    this.client = axios.create({
+    this.client = getAxiosInstance(logger, {
       method: "get",
       baseURL: "https://api.cloudflare.com/client/v4",
       headers: {
@@ -24,37 +31,43 @@ export class CloudflareApi {
 
   fetchCNameRecords = async (): Promise<DNSRecord[]> => {
     const query = "type=CNAME";
-    const response = await this.client.get(`zones/${this.zone}/dns_records?${query}`);
+    const response = await this.client.get<CloudflareResponse<DNSRecord[]>>(
+      `zones/${this.zone}/dns_records?${query}`
+    );
 
-    return (response.data.results as DNSRecord[]) || [];
+    const records = response.data.result || [];
+
+    this.logger.debug(
+      "[Fetch DNS Records]",
+      "Dns Records fetched from cloudflare:",
+      records.map((r) => r.name)
+    );
+
+    return records;
   };
 
-  createCNameRecord = async (name: string): Promise<DNSRecord> => {
-    const response = await this.client.post(`zones/${this.zone}/dns_records`, {
-      type: "CNAME",
-      name,
-      content: this.tunnelUrl,
-      ttl: 1,
-      priority: 10,
-      proxied: true,
-    });
+  createCNameRecord = async (name: string): Promise<void> => {
+    // await this.client.post(`zones/${this.zone}/dns_records`, {
+    //   type: "CNAME",
+    //   name,
+    //   content: this.tunnelUrl,
+    //   ttl: 1,
+    //   priority: 10,
+    //   proxied: true,
+    // });
 
     this.logger.info(
       "[DNS Record Create]",
       `CNAME Record with name ${name} was created in zone ${this.zone}`
     );
-
-    return response.data.result;
   };
 
-  deleteRecord = async (id: string): Promise<{ id: string }> => {
-    const response = await this.client.delete(`zones/${this.zone}/dns_records/${id}`);
+  deleteRecord = async (id: string): Promise<void> => {
+    //  await this.client.delete(`zones/${this.zone}/dns_records/${id}`);
 
     this.logger.info(
       "[DNS Record Delete]",
       `CNAME Record with id ${id} was deleted in zone ${this.zone}`
     );
-
-    return response.data.result;
   };
 }
