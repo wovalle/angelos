@@ -1,6 +1,5 @@
-import { createMock } from "ts-jest-mock";
 import { makeScheduler } from "./scheduler";
-import { Logger } from "tslog";
+import { getMockLogger } from "../test/testUtils";
 
 describe("Scheduler", () => {
   beforeAll(() => {
@@ -12,8 +11,7 @@ describe("Scheduler", () => {
   });
 
   it("should schedule jobs", async () => {
-    const MockLogger = createMock(Logger);
-    const scheduler = makeScheduler(new MockLogger(), 100);
+    const scheduler = makeScheduler(getMockLogger(), 100);
 
     const fn = jest.fn();
 

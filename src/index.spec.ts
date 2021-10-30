@@ -1,11 +1,11 @@
 import { rest } from "msw";
 import { setupServer } from "msw/node";
-import { main } from ".";
+import { main } from "./operations";
 import { getCloudflareRecordsMock, getDockerContainersMock } from "../test/fixtures";
 
-import { createMock } from "ts-jest-mock";
-import { makeScheduler } from "./scheduler";
-jest.mock("./scheduler");
+import { CloudflareApi } from "./cloudflare";
+import { DockerApi } from "./docker";
+import { getMockLogger } from "../test/testUtils";
 
 const mswServer = setupServer(
   rest.get("https://api.cloudflare.com/client/v4/zones/:zoneId/dns_records", (req, res, ctx) => {
@@ -34,17 +34,28 @@ describe("Angelos", () => {
   afterAll(() => mswServer.close());
 
   it("should properly execute diff", async () => {
-    const makeSchedulerMock = createMock(makeScheduler);
+    const mockLogger = getMockLogger();
 
     const scheduleJob = jest.fn();
     const removeJobIfExists = jest.fn();
-    makeSchedulerMock.mockImplementation(() => ({
-      scheduleJob,
-      removeJobIfExists,
-      getJobs: jest.fn(),
-    }));
 
-    await main();
+    await main({
+      cloudflareClient: new CloudflareApi(mockLogger, "token", "zone", "url"),
+      logger: mockLogger,
+      dockerClient: new DockerApi(
+        mockLogger,
+        "sock",
+        "http://localhost/v1.41",
+        "angelos.hostname",
+        "angelos.enabled"
+      ),
+      scheduler: {
+        scheduleJob,
+        scheduleIntervalJob: jest.fn(),
+        removeJobIfExists,
+        getJobs: jest.fn(),
+      },
+    });
 
     expect(removeJobIfExists).toHaveBeenCalledWith(
       expect.objectContaining({ type: "RemoveDnsRecord", jobId: "a.angelos.rocks" })

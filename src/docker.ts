@@ -1,5 +1,5 @@
 import axios, { Axios } from "axios";
-import { Logger } from "tslog";
+import type { Logger } from "tslog";
 
 type Container = {
   Id: string;
@@ -20,16 +20,29 @@ type Container = {
 export class DockerApi {
   private client: Axios;
 
-  constructor(private logger: Logger, sock: string, apiBaseUrl: string) {
+  constructor(
+    private logger: Logger,
+    sock: string,
+    dockerApiHost: string,
+    private dockerLabelHostname: string,
+    private dockerLabelEnable: string
+  ) {
     this.client = axios.create({
       socketPath: sock,
-      baseURL: apiBaseUrl,
+      baseURL: dockerApiHost,
     });
   }
 
-  getContainers = async (labelFilter?: string) => {
+  getContainers = async () => {
     const client = await this.client.get("/containers/json");
 
-    return client.data as Container[];
+    const containers = client.data as Container[];
+    return containers.filter((c) => c.Labels[this.dockerLabelHostname]);
+  };
+
+  getDockerContainerHosts = async () => {
+    const containers = await this.getContainers();
+
+    return containers.map((c) => c.Labels[this.dockerLabelHostname]);
   };
 }

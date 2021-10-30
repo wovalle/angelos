@@ -1,6 +1,6 @@
 import axios, { Axios } from "axios";
-import { Logger } from "tslog";
-import { DNSRecord } from "@cloudflare/types";
+import type { Logger } from "tslog";
+import type { DNSRecord } from "@cloudflare/types";
 
 export class CloudflareApi {
   private client: Axios;
