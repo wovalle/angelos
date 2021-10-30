@@ -1,6 +1,14 @@
+import { DNSRecord } from "@cloudflare/types";
+
 type ContainerMockData = {
   id: string;
   labels: Record<string, string>;
+};
+
+type DNSRecordMock = {
+  id?: string;
+  name: string;
+  type?: DNSRecord["type"];
 };
 
 const getDockerMock = (data: ContainerMockData) => ({
@@ -71,53 +79,40 @@ const getDockerMock = (data: ContainerMockData) => ({
   ],
 });
 
-export const getDockerContainers = (data: ContainerMockData[]) => data.map((d) => getDockerMock(d));
+export const getDockerContainersMock = (data: ContainerMockData[]) =>
+  data.map((d) => getDockerMock(d));
 
-export const DNSRecords = {
-  result: [
-    {
-      id: "dns-2",
-      zone_id: "zone1",
-      zone_name: "angelos.rocks",
-      name: "angelos.rocks",
-      type: "CNAME",
-      content: "tunnel-uuid.cfargotunnel.com",
-      proxiable: true,
-      proxied: true,
-      ttl: 1,
-      locked: false,
-      meta: {
-        auto_added: false,
-        managed_by_apps: false,
-        managed_by_argo_tunnel: false,
-        source: "primary",
-      },
-      created_on: "2021-10-26T19:26:30.467714Z",
-      modified_on: "2021-10-26T19:26:30.467714Z",
-    },
-    {
-      id: "dns-3",
-      zone_id: "zone1",
-      zone_name: "angelos.rocks",
-      name: "a.angelos.rocks",
-      type: "CNAME",
-      content: "tunnel-uuid.cfargotunnel.com",
-      proxiable: true,
-      proxied: true,
-      ttl: 1,
-      locked: false,
-      meta: {
-        auto_added: false,
-        managed_by_apps: false,
-        managed_by_argo_tunnel: false,
-        source: "primary",
-      },
-      created_on: "2021-10-26T21:03:35.722062Z",
-      modified_on: "2021-10-26T21:03:35.722062Z",
-    },
-  ],
+export const getCloudflareMock = ({ id, name, type }: DNSRecordMock): DNSRecord => ({
+  id: id ?? name,
+  zone_id: "zone1",
+  zone_name: "angelos.rocks",
+  name,
+  type: type ?? "CNAME",
+  content: "tunnel-uuid.cfargotunnel.com",
+  proxiable: true,
+  proxied: true,
+  ttl: 1,
+  locked: false,
+  meta: {
+    auto_added: false,
+    managed_by_apps: false,
+    managed_by_argo_tunnel: false,
+    source: "primary",
+  },
+  created_on: new Date().toUTCString(),
+  modified_on: new Date().toUTCString(),
+});
+
+export const getCloudflareRecordsMock = (data: DNSRecordMock[]) => ({
+  results: data.map((d) => getCloudflareMock(d)),
   success: true,
   errors: [],
   messages: [],
-  result_info: { page: 1, per_page: 20, count: 3, total_count: 3, total_pages: 1 },
-};
+  result_info: {
+    page: 1,
+    per_page: 20,
+    count: data.length,
+    total_count: data.length,
+    total_pages: 1,
+  },
+});

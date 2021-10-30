@@ -1,35 +1,35 @@
-import { Docker } from "node-docker-api";
-import { Container } from "node-docker-api/lib/container";
+import axios, { Axios } from "axios";
 import { Logger } from "tslog";
 
-type ContainerWithData = Container & {
-  data: {
-    Id: string;
-    Names: string[];
-    Image: string;
-    ImageID: string;
-    Command: string;
-    Created: number;
-    Ports: Record<string, unknown>[];
-    Labels: Record<string, string>;
-    State: string;
-    Status: string;
-    HostConfig: Record<string, unknown>;
-    NetworkSettings: Object;
-    Mounts: Array<Object>;
-  };
+type Container = {
+  Id: string;
+  Names: string[];
+  Image: string;
+  ImageID: string;
+  Command: string;
+  Created: number;
+  Ports: Record<string, unknown>[];
+  Labels: Record<string, string>;
+  State: string;
+  Status: string;
+  HostConfig: Record<string, unknown>;
+  NetworkSettings: Object;
+  Mounts: Array<Object>;
 };
 
 export class DockerApi {
-  private client: Docker;
+  private client: Axios;
 
-  constructor(private sock: string, private logger: Logger) {
-    this.client = new Docker({ socketPath: sock });
+  constructor(private logger: Logger, sock: string, apiBaseUrl: string) {
+    this.client = axios.create({
+      socketPath: sock,
+      baseURL: apiBaseUrl,
+    });
   }
 
-  getDockerContainers = async (filter?: string) => {
-    const containers = (await this.client.container.list()) as ContainerWithData[];
+  getContainers = async (labelFilter?: string) => {
+    const client = await this.client.get("/containers/json");
 
-    return filter ? containers.filter((c) => c.data.Labels[filter]) : containers;
+    return client.data as Container[];
   };
 }

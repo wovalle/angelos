@@ -2,38 +2,39 @@ import { Logger } from "tslog";
 
 type Job = {
   type: JobType;
-  id: string;
-  jobId: NodeJS.Timeout;
+  jobId: string;
+  timerId: NodeJS.Timeout;
 };
 
 type JobType = "AddDnsRecord" | "RemoveDnsRecord";
-export class Scheduler {
-  deleteRecordDelayInSeconds: number;
-  jobsRegistry: Map<string, Job> = new Map();
 
-  constructor(deleteRecordDelayInSeconds: number, private logger: Logger) {
-    this.deleteRecordDelayInSeconds = deleteRecordDelayInSeconds;
-  }
+const makeScheduler = (logger: Logger, deleteRecordDelayInSeconds: number) => {
+  const jobsRegistry: Map<string, Job> = new Map();
 
-  addJob = (type: JobType, id: string, fn: Function) => {
-    const jobId = setTimeout(async () => {
-      this.jobsRegistry.delete(id);
-      await fn();
-    }, this.deleteRecordDelayInSeconds);
+  return {
+    scheduleJob: (opts: { type: JobType; jobId: string; fn: Function }) => {
+      const timerId = setTimeout(async () => {
+        jobsRegistry.delete(opts.jobId);
+        await opts.fn();
+      }, deleteRecordDelayInSeconds * 1000);
 
-    this.jobsRegistry.set(id, { type, id, jobId });
-    this.logger.info("[Add Job] Added job type");
+      jobsRegistry.set(opts.jobId, { type: opts.type, jobId: opts.jobId, timerId });
+      logger.info("[Schedule Job]", opts.type, `Job with id="${opts.jobId}" has been scheduled`);
+    },
+
+    removeJobIfExists: (opts: { type: JobType; jobId: string }) => {
+      const job = jobsRegistry.get(opts.jobId);
+
+      if (!job) {
+        return;
+      }
+
+      clearTimeout(job.timerId);
+      jobsRegistry.delete(opts.jobId);
+      logger.info("[Remove Job]", opts.type, `Job with id="${opts.jobId}" has been removed`);
+    },
+    getJobs: () => jobsRegistry,
   };
+};
 
-  removeJobIfExists = (type: JobType, id: string) => {
-    const job = this.jobsRegistry.get(id);
-
-    if (!job) {
-      return;
-    }
-
-    clearTimeout(job.jobId);
-    this.jobsRegistry.delete(id);
-    this.logger.info("[Remove Job]", type, `Job id "${id}" has been removed`);
-  };
-}
+export { makeScheduler };

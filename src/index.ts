@@ -1,29 +1,21 @@
 import { DNSRecord } from "@cloudflare/types";
 import axios from "axios";
 import { Logger } from "tslog";
+
 import { CloudflareApi } from "./cloudflare";
 import { DockerApi } from "./docker";
-import { Scheduler } from "./scheduler";
-
+import { makeScheduler } from "./scheduler";
+import { version } from "../package.json";
 import env from "./env";
 
 const logger: Logger = new Logger({ setCallerAsLoggerName: true });
 
-const cloudflareClient = new CloudflareApi(
-  env.cloudflareApiToken,
-  env.cloudflareZoneId,
-  env.cloudflareTunnelUrl,
-  logger.getChildLogger({ name: "CloudflareApi" })
-);
-
-const dockerClient = new DockerApi(env.dockerSock, logger.getChildLogger({ name: "DockerApi" }));
-const scheduler = new Scheduler(1000 * 60 * 5, logger.getChildLogger({ name: "Scheduler" }));
-
+// TODO: WithChildLogger(name)
 const diff = (cfRecords: DNSRecord[], dockerHostNames: string[]) => {
   return {
     recordsInCloudflareButNotDocker: cfRecords.filter((r) => !dockerHostNames.includes(r.name)),
-    recordsInDockerButNotCloudFlare: dockerHostNames.filter((h) =>
-      cfRecords.find((r) => r.name === h)
+    recordsInDockerButNotCloudFlare: dockerHostNames.filter(
+      (h) => !cfRecords.find((r) => r.name === h)
     ),
   };
 };
@@ -41,12 +33,30 @@ const throwFatal = (e: unknown, errorText?: string) => {
 };
 
 export const main = async () => {
-  logger.info("Init");
+  const cloudflareClient = new CloudflareApi(
+    logger.getChildLogger({ name: "CloudflareApi" }),
+    env.cloudflareApiToken,
+    env.cloudflareZoneId,
+    env.cloudflareTunnelUrl
+  );
+
+  const dockerClient = new DockerApi(
+    logger.getChildLogger({ name: "DockerApi" }),
+    env.dockerSock,
+    env.dockerApiHost
+  );
+  // const scheduler = new Scheduler(logger.getChildLogger({ name: "Scheduler" }), 1000 * 60 * 5);
+  const scheduler = makeScheduler(logger.getChildLogger({ name: "Scheduler" }), 1000 * 60 * 5);
+
+  logger.info(`Init angelos ${version}`);
+
+  // TODO: Test cloudflare
+  // TODO: Test docker
 
   const cloudflareRecords = await cloudflareClient.fetchCNameRecords().catch((e) => throwFatal(e));
-  const dockerContainers = await dockerClient.getDockerContainers().catch((e) => throwFatal(e));
+  const dockerContainers = await dockerClient.getContainers().catch((e) => throwFatal(e));
 
-  const dcHosts = dockerContainers.map((m) => m.data.Labels[env.dockerLabel || ""]);
+  const dcHosts = dockerContainers.map((m) => m.Labels[env.dockerLabel]);
 
   const { recordsInCloudflareButNotDocker, recordsInDockerButNotCloudFlare } = diff(
     cloudflareRecords,
@@ -59,10 +69,14 @@ export const main = async () => {
    */
   if (recordsInDockerButNotCloudFlare.length) {
     recordsInDockerButNotCloudFlare.forEach((r) => {
-      // If we have any pending deletions, get rid of them
-      scheduler.removeJobIfExists("RemoveDnsRecord", r);
+      // If we have any pending deletions, get rid of 'em
+      scheduler.removeJobIfExists({ type: "RemoveDnsRecord", jobId: r });
 
-      scheduler.addJob("AddDnsRecord", r, () => cloudflareClient.createCNameRecord(r));
+      scheduler.scheduleJob({
+        type: "AddDnsRecord",
+        jobId: r,
+        fn: () => cloudflareClient.createCNameRecord(r),
+      });
     });
   }
 
@@ -80,7 +94,12 @@ export const main = async () => {
         logger.error(`Cloudflare DNS record with id=${id} doesn't have a name`);
         return;
       }
-      scheduler.addJob("RemoveDnsRecord", name, () => cloudflareClient.deleteRecord(id));
+
+      scheduler.scheduleJob({
+        type: "RemoveDnsRecord",
+        jobId: name,
+        fn: () => cloudflareClient.deleteRecord(id),
+      });
     });
   }
 };

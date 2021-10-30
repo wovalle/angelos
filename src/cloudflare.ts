@@ -6,10 +6,10 @@ export class CloudflareApi {
   private client: Axios;
 
   constructor(
+    private logger: Logger,
     private token: string,
     private zone: string,
-    private tunnelUrl: string,
-    private logger: Logger
+    private tunnelUrl: string
   ) {
     this.client = axios.create({
       method: "get",
