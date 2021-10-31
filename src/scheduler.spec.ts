@@ -11,11 +11,11 @@ describe("Scheduler", () => {
   });
 
   it("should schedule jobs", async () => {
-    const scheduler = makeScheduler(getMockLogger(), 100);
+    const scheduler = makeScheduler(getMockLogger());
 
     const fn = jest.fn();
 
-    scheduler.scheduleJob({ type: "AddDnsRecord", jobId: "test", fn });
+    scheduler.scheduleJob({ type: "AddDnsRecord", jobId: "test", fn, delayInSeconds: 100 });
     expect(fn).not.toHaveBeenCalled();
 
     expect(scheduler.getJobs().get("test")).toEqual(

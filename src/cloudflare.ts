@@ -2,6 +2,7 @@ import { Axios } from "axios";
 import type { Logger } from "tslog";
 import type { DNSRecord } from "@cloudflare/types";
 import { getAxiosInstance } from "./utils";
+import env from "./env";
 
 type CloudflareResponse<T> = {
   success: boolean;
@@ -11,13 +12,14 @@ type CloudflareResponse<T> = {
 
 export class CloudflareApi {
   private client: Axios;
+  private token: string;
+  private zone: string;
+  private tunnelUrl: string;
 
-  constructor(
-    private logger: Logger,
-    private token: string,
-    private zone: string,
-    private tunnelUrl: string
-  ) {
+  constructor(private logger: Logger) {
+    this.token = env.cloudflareApiToken;
+    (this.zone = env.cloudflareZoneId), (this.tunnelUrl = env.cloudflareTunnelUrl);
+
     this.client = getAxiosInstance(logger, {
       method: "get",
       baseURL: "https://api.cloudflare.com/client/v4",
@@ -47,15 +49,21 @@ export class CloudflareApi {
   };
 
   createCNameRecord = async (name: string): Promise<void> => {
-    // await this.client.post(`zones/${this.zone}/dns_records`, {
-    //   type: "CNAME",
-    //   name,
-    //   content: this.tunnelUrl,
-    //   ttl: 1,
-    //   priority: 10,
-    //   proxied: true,
-    // });
-
+    if (env.dryRun) {
+      this.logger.info(
+        "[DNS Record Create]",
+        "Skipping DNS Record Create because Dry Run mode is true"
+      );
+    } else {
+      await this.client.post(`zones/${this.zone}/dns_records`, {
+        type: "CNAME",
+        name,
+        content: this.tunnelUrl,
+        ttl: 1,
+        priority: 10,
+        proxied: true,
+      });
+    }
     this.logger.info(
       "[DNS Record Create]",
       `CNAME Record with name ${name} was created in zone ${this.zone}`
@@ -63,11 +71,18 @@ export class CloudflareApi {
   };
 
   deleteRecord = async (id: string): Promise<void> => {
-    //  await this.client.delete(`zones/${this.zone}/dns_records/${id}`);
+    if (env.dryRun) {
+      this.logger.info(
+        "[DNS Record Create]",
+        "Skipping DNS Record Create because Dry Run mode is true"
+      );
+    } else {
+      await this.client.delete(`zones/${this.zone}/dns_recordss/${id}`);
 
-    this.logger.info(
-      "[DNS Record Delete]",
-      `CNAME Record with id ${id} was deleted in zone ${this.zone}`
-    );
+      this.logger.info(
+        "[DNS Record Delete]",
+        `CNAME Record with id ${id} was deleted in zone ${this.zone}`
+      );
+    }
   };
 }

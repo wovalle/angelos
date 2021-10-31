@@ -6,8 +6,6 @@ import { version } from "../package.json";
 import env from "./env";
 import { CloudflareApi } from "./cloudflare";
 import { DockerApi } from "./docker";
-import axios from "axios";
-import { nanoid } from "nanoid";
 
 const logger = new Logger({
   setCallerAsLoggerName: true,
@@ -16,25 +14,17 @@ const logger = new Logger({
   minLevel: env.logLevel,
 });
 
-const cloudflareClient = new CloudflareApi(
-  logger.getChildLogger({ name: "CloudflareApi" }),
-  env.cloudflareApiToken,
-  env.cloudflareZoneId,
-  env.cloudflareTunnelUrl
-);
+const cloudflareClient = new CloudflareApi(logger.getChildLogger({ name: "CloudflareApi" }));
 
-const dockerClient = new DockerApi(
-  logger.getChildLogger({ name: "DockerApi" }),
-  env.dockerSock,
-  env.dockerApiHost,
-  env.dockerLabelHostname,
-  env.dockerLabelEnable
-);
+const dockerClient = new DockerApi(logger.getChildLogger({ name: "DockerApi" }));
 
-const scheduler = makeScheduler(logger.getChildLogger({ name: "Scheduler" }), 1000 * 60 * 5);
+const scheduler = makeScheduler(logger.getChildLogger({ name: "Scheduler" }));
 
 logger.info(`Init angelos ${version}`);
-
+logger.info(`Dry Run=${env.dryRun}`);
+logger.info(`Log Level=${env.logLevel}`);
+logger.info(`Delete DNS Record Delay=${env.deleteDnsRecordDelay}`);
+logger.info(`Add DNS Record Delay=${env.addDnsRecordDelay}`);
 // Test your external dependencies
 // Subscribe to container changes
 
@@ -44,6 +34,8 @@ const syncResourcesJob = syncResources({
   scheduler,
   cloudflareClient,
   dockerClient,
+  deleteDnsRecordDelay: env.deleteDnsRecordDelay,
+  addDnsRecordDelay: env.addDnsRecordDelay,
 });
 
 // Schedule SyncResources each hour

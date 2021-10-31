@@ -40,21 +40,17 @@ describe("Angelos", () => {
     const removeJobIfExists = jest.fn();
 
     await main({
-      cloudflareClient: new CloudflareApi(mockLogger, "token", "zone", "url"),
+      cloudflareClient: new CloudflareApi(mockLogger),
       logger: mockLogger,
-      dockerClient: new DockerApi(
-        mockLogger,
-        "sock",
-        "http://localhost/v1.41",
-        "angelos.hostname",
-        "angelos.enabled"
-      ),
+      dockerClient: new DockerApi(mockLogger),
       scheduler: {
         scheduleJob,
         scheduleIntervalJob: jest.fn(),
         removeJobIfExists,
         getJobs: jest.fn(),
       },
+      addDnsRecordDelay: 100,
+      deleteDnsRecordDelay: 100,
     });
 
     expect(removeJobIfExists).toHaveBeenCalledWith(

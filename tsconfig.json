@@ -1,4 +1,13 @@
 {
+"exclude": [
+  "node_modules/*",
+  "**/node_modules/*",
+  "*/**/dist",
+  "src/**/*.spec.ts"
+],
+"include": [
+  "src/**/*"
+],
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig.json to read more about this file */
     /* Projects */

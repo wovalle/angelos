@@ -2,9 +2,11 @@
   "name": "angelos",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "build": "tsc",
+    "start": "yarn ts-node -r dotenv/config src"
   },
   "author": "",
   "license": "MIT",

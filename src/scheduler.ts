@@ -1,4 +1,5 @@
 import type { Logger } from "tslog";
+import { logError } from "./utils";
 
 type Job = {
   type: JobType;
@@ -8,20 +9,41 @@ type Job = {
 
 type JobType = "AddDnsRecord" | "RemoveDnsRecord" | "PullResources" | "DockerEvents";
 
-const makeScheduler = (logger: Logger, deleteRecordDelayInSeconds: number) => {
+const makeScheduler = (logger: Logger) => {
   const jobsRegistry: Map<string, Job> = new Map();
 
   return {
-    scheduleJob: (opts: { type: JobType; jobId: string; fn: Function }) => {
+    scheduleJob: (opts: {
+      type: JobType;
+      jobId: string;
+      fn: (...args: any[]) => Promise<void>;
+      delayInSeconds: number;
+    }) => {
       const timerId = setTimeout(async () => {
-        logger.info("[Run Job]", opts.type, `Job with id="${opts.jobId}" has been executed`);
+        logger.info("[Run Job]", opts.type, `Job with id="${opts.jobId}" will be executed`);
 
         jobsRegistry.delete(opts.jobId);
-        await opts.fn();
-      }, deleteRecordDelayInSeconds * 1000);
+        try {
+          await opts.fn();
+          logger.info(
+            "[Run Job]",
+            opts.type,
+            `Job with id="${opts.jobId}" has been executed successfully `
+          );
+        } catch (e) {
+          logger.error("[Run Job]", opts.type, `Job with id="${opts.jobId}" has failed`);
+
+          logError(logger, e);
+        }
+      }, opts.delayInSeconds * 1000);
 
       jobsRegistry.set(opts.jobId, { type: opts.type, jobId: opts.jobId, timerId });
-      logger.info("[Schedule Job]", opts.type, `Job with id="${opts.jobId}" has been scheduled and will be executed in ${deleteRecordDelayInSeconds} seconds`);
+
+      logger.info(
+        "[Schedule Job]",
+        opts.type,
+        `Job with id="${opts.jobId}" has been scheduled and will be executed in ${opts.delayInSeconds} seconds`
+      );
     },
 
     scheduleIntervalJob: (opts: {

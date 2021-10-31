@@ -20,11 +20,15 @@ export const main = async ({
   scheduler,
   cloudflareClient,
   dockerClient,
+  addDnsRecordDelay,
+  deleteDnsRecordDelay,
 }: {
   logger: Logger;
   scheduler: Scheduler;
   cloudflareClient: CloudflareApi;
   dockerClient: DockerApi;
+  addDnsRecordDelay: number;
+  deleteDnsRecordDelay: number;
 }) => {
   const cloudflareRecords = await cloudflareClient
     .fetchCNameRecords()
@@ -50,6 +54,7 @@ export const main = async ({
         type: "AddDnsRecord",
         jobId: r,
         fn: () => cloudflareClient.createCNameRecord(r),
+        delayInSeconds: addDnsRecordDelay,
       });
     });
   }
@@ -73,6 +78,7 @@ export const main = async ({
         type: "RemoveDnsRecord",
         jobId: name,
         fn: () => cloudflareClient.deleteRecord(id),
+        delayInSeconds: deleteDnsRecordDelay,
       });
     });
   }
