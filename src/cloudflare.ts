@@ -31,6 +31,20 @@ export class CloudflareApi {
     });
   }
 
+  testConnection = async () => {
+    const res = await this.client.get("/user/token/verify");
+
+    if (!res.data.success) {
+      this.logger.error("[Cloudflare Token Verify]", "Error verifying token", {
+        data: res.data,
+      });
+
+      throw new Error("Error verifying cloudflare token");
+    }
+
+    this.logger.info("[Cloudflare Token Verify]", "Connection verified");
+  };
+
   fetchCNameRecords = async (): Promise<DNSRecord[]> => {
     const query = "type=CNAME";
     const response = await this.client.get<CloudflareResponse<DNSRecord[]>>(

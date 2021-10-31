@@ -25,7 +25,10 @@ logger.info(`Dry Run=${env.dryRun}`);
 logger.info(`Log Level=${env.logLevel}`);
 logger.info(`Delete DNS Record Delay=${env.deleteDnsRecordDelay}`);
 logger.info(`Add DNS Record Delay=${env.addDnsRecordDelay}`);
+
 // Test your external dependencies
+// await dockerClient.testConnection()
+// await cloudflareClient.testConnection()
 // Subscribe to container changes
 
 // Call SyncResources once

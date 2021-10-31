@@ -16,7 +16,7 @@ const mswServer = setupServer(
     return res(ctx.json(records));
   }),
 
-  rest.get("http://localhost/v1.41/containers/json", (req, res, ctx) => {
+  rest.get("http://localhost/containers/json", (req, res, ctx) => {
     const containers = getDockerContainersMock([
       { id: "c1", labels: { "angelos.hostname": "angelos.rocks", "angelos.enabled": "true" } },
       { id: "c2", labels: { "angelos.hostname": "a.angelos.rocks", "angelos.enabled": "false" } },
