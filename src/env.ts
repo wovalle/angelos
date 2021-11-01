@@ -27,7 +27,7 @@ const parseNumber = (key: string, val: unknown) => {
   return Number.parseInt(val);
 };
 
-const withDefault = <T>(key: string, def: T, fn?: (key: string, val: unknown) => T): T => {
+const withDefault = <T>(key: string, def: T, fn?: (key: string, val: string) => T): T => {
   const envVar = process.env[key];
 
   if (!envVar) {
@@ -41,11 +41,15 @@ const withDefault = <T>(key: string, def: T, fn?: (key: string, val: unknown) =>
   return envVar as any;
 };
 
-const loglevel = withDefault("LOG_LEVEL", "info");
+const validLogLevels = ["silly", "trace", "debug", "info", "warn", "error", "fatal"];
+const validProviders = ["docker", "traefik"];
 
-if (!["silly", "trace", "debug", "info", "warn", "error", "fatal"].includes(loglevel)) {
-  throw new Error(`Invalid LOG_LEVEL: ${loglevel}`);
-}
+const withAllowedValues = (allowed: string[]) => (key: string, val: string) => {
+  if (!allowed.includes(val)) {
+    throw new Error(`Invalid ${key}=${val}. Must be one of: ${allowed.join(", ")}`);
+  }
+  return val;
+};
 
 export default {
   cloudflareZoneId: throwIfUndefined("CLOUDFLARE_ZONE_ID"),
@@ -55,8 +59,9 @@ export default {
   dockerApiHost: withDefault("DOCKER_API_HOST", "http://localhost/v1.41"),
   dockerLabelHostname: withDefault("DOCKER_LABEL_HOSTNAME", "angelos.hostname"),
   dockerLabelEnable: withDefault("DOCKER_LABEL_ENABLE", "angelos.enabled"),
-  logLevel: loglevel as TLogLevelName,
+  logLevel: withDefault("LOG_LEVEL", "info", withAllowedValues(validLogLevels)) as TLogLevelName,
   dryRun: withDefault("DRY_RUN", false, parseBoolean),
   deleteDnsRecordDelay: withDefault("DELETE_DNS_RECORD_DELAY", 1000 * 60 * 5, parseNumber),
   addDnsRecordDelay: withDefault("ADD_DNS_RECORD_DELAY", 1000 * 60 * 1, parseNumber),
+  provider: withDefault("PROVIDER", "docker", withAllowedValues(validProviders)),
 };

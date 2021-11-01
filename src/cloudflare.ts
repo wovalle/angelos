@@ -15,10 +15,13 @@ export class CloudflareApi {
   private token: string;
   private zone: string;
   private tunnelUrl: string;
+  private cache: DNSRecord[];
 
   constructor(private logger: Logger) {
     this.token = env.cloudflareApiToken;
-    (this.zone = env.cloudflareZoneId), (this.tunnelUrl = env.cloudflareTunnelUrl);
+    this.zone = env.cloudflareZoneId;
+    this.tunnelUrl = env.cloudflareTunnelUrl;
+    this.cache = [];
 
     this.client = getAxiosInstance(logger, {
       method: "get",
@@ -52,6 +55,9 @@ export class CloudflareApi {
     );
 
     const records = response.data.result || [];
+
+    // Reseting cache
+    this.cache = records;
 
     this.logger.debug(
       "[Fetch DNS Records]",
@@ -99,4 +105,8 @@ export class CloudflareApi {
       );
     }
   };
+
+  getDnsRecordIdFromHostname(hostname: string) {
+    return this.cache.find((r) => r.name === hostname)?.name;
+  }
 }

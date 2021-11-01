@@ -1,4 +1,4 @@
-import { main as syncResources } from "./operations";
+import { makeOperations } from "./operations";
 import { Logger } from "tslog";
 
 import { makeScheduler } from "./scheduler";
@@ -20,6 +20,15 @@ const dockerClient = new DockerApi(logger.getChildLogger({ name: "DockerApi" }))
 
 const scheduler = makeScheduler(logger.getChildLogger({ name: "Scheduler" }));
 
+const { syncResources, scheduleAddDnsRecord, scheduleDeleteDnsRecord } = makeOperations({
+  logger: logger.getChildLogger({ name: "SyncResources" }),
+  scheduler,
+  cloudflareClient,
+  dockerClient,
+  deleteDnsRecordDelay: env.deleteDnsRecordDelay,
+  addDnsRecordDelay: env.addDnsRecordDelay,
+});
+
 logger.info(`Init angelos ${version}`);
 logger.info(`Dry Run=${env.dryRun}`);
 logger.info(`Log Level=${env.logLevel}`);
@@ -31,15 +40,19 @@ logger.info(`Add DNS Record Delay=${env.addDnsRecordDelay}`);
 // await cloudflareClient.testConnection()
 // Subscribe to container changes
 
-// Call SyncResources once
-const syncResourcesJob = syncResources({
-  logger: logger.getChildLogger({ name: "SyncResources" }),
-  scheduler,
-  cloudflareClient,
-  dockerClient,
-  deleteDnsRecordDelay: env.deleteDnsRecordDelay,
-  addDnsRecordDelay: env.addDnsRecordDelay,
+dockerClient.subscribeToChanges((eventType, host) => {
+  switch (eventType) {
+    case "AddDnsRecord": {
+      scheduleAddDnsRecord(host);
+    }
+    case "DeleteDnsRecord": {
+      scheduleDeleteDnsRecord(host);
+    }
+  }
 });
+
+// Call SyncResources once
+const syncResourcesJob = syncResources();
 
 // Schedule SyncResources each hour
 scheduler.scheduleIntervalJob({

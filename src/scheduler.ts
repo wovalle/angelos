@@ -75,7 +75,7 @@ const makeScheduler = (logger: Logger) => {
 
       clearTimeout(job.timerId);
       jobsRegistry.delete(opts.jobId);
-      logger.info("[Remove Job]", opts.type, `Job with id="${opts.jobId}" has been removed`);
+      logger.info("[Remove Job]", opts.type, `Job with id="${opts.jobId}" has been aborted`);
     },
     getJobs: () => jobsRegistry,
   };

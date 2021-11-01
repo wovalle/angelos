@@ -1,6 +1,6 @@
 import { rest } from "msw";
 import { setupServer } from "msw/node";
-import { main } from "./operations";
+import { makeOperations } from "./operations";
 import { getCloudflareRecordsMock, getDockerContainersMock } from "../test/fixtures";
 
 import { CloudflareApi } from "./cloudflare";
@@ -33,34 +33,43 @@ describe("Angelos", () => {
   afterEach(() => mswServer.resetHandlers());
   afterAll(() => mswServer.close());
 
-  it("should properly execute diff", async () => {
-    const mockLogger = getMockLogger();
-
+  describe("syncOperations", () => {
     const scheduleJob = jest.fn();
     const removeJobIfExists = jest.fn();
+    let operations: ReturnType<typeof makeOperations>;
 
-    await main({
-      cloudflareClient: new CloudflareApi(mockLogger),
-      logger: mockLogger,
-      dockerClient: new DockerApi(mockLogger),
-      scheduler: {
-        scheduleJob,
-        scheduleIntervalJob: jest.fn(),
-        removeJobIfExists,
-        getJobs: jest.fn(),
-      },
-      addDnsRecordDelay: 100,
-      deleteDnsRecordDelay: 100,
+    beforeEach(() => {
+      const mockLogger = getMockLogger();
+
+      operations = makeOperations({
+        cloudflareClient: new CloudflareApi(mockLogger),
+        logger: mockLogger,
+        dockerClient: new DockerApi(mockLogger),
+        scheduler: {
+          scheduleJob,
+          scheduleIntervalJob: jest.fn(),
+          removeJobIfExists,
+          getJobs: jest.fn(),
+        },
+        addDnsRecordDelay: 100,
+        deleteDnsRecordDelay: 100,
+      });
+
+      jest.clearAllMocks();
     });
 
-    expect(removeJobIfExists).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "RemoveDnsRecord", jobId: "a.angelos.rocks" })
-    );
-    expect(scheduleJob).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "AddDnsRecord", jobId: "a.angelos.rocks" })
-    );
-    expect(scheduleJob).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "RemoveDnsRecord", jobId: "b.angelos.rocks" })
-    );
+    it("should properly execute diff", async () => {
+      await operations.syncResources();
+
+      expect(removeJobIfExists).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "RemoveDnsRecord", jobId: "a.angelos.rocks" })
+      );
+      expect(scheduleJob).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "AddDnsRecord", jobId: "a.angelos.rocks" })
+      );
+      expect(scheduleJob).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "RemoveDnsRecord", jobId: "b.angelos.rocks" })
+      );
+    });
   });
 });
