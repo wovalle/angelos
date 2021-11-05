@@ -35,10 +35,10 @@ const parseNumber = (key: string, val: unknown) => {
   return Number.parseInt(val);
 };
 
-function getValue(key: string): string | undefined;
-function getValue<K>(key: string, fn: (key: string, val?: string) => K): K | undefined;
+function getValue(key: string): string;
+function getValue<K>(key: string, fn: (key: string, val?: string) => K): K;
 function getValue<K>(key: string, fn?: (key: string, val?: string) => K): any {
-  const envVar = process.env[key];
+  const envVar = process.env[key] || "";
 
   if (typeof fn !== "undefined") {
     return fn(key, envVar);
@@ -70,8 +70,10 @@ const provider = withDefault("PROVIDER", "docker", withAllowedValues(validProvid
 export default {
   cloudflareZoneId: throwIfUndefined("CLOUDFLARE_ZONE_ID"),
   cloudflareApiToken: throwIfUndefined("CLOUDFLARE_API_TOKEN"),
-  cloudflareTunnelUrl: getValue("CLOUDFLARE_TUNNEL_URL", (key, val) => {
-    throwIfUndefined(key);
+  cloudflareTunnelUrl: getValue<string>("CLOUDFLARE_TUNNEL_URL", (key, val) => {
+    if (!val) {
+      throw new Error("CLOUDFLARE_TUNNEL_URL is required");
+    }
 
     if (val?.startsWith("http")) {
       throw new Error("Tunnel url cannot contain the protocol. Remove http/https");
