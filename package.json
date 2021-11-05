@@ -4,6 +4,7 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
+    "ci": "yarn install --frozen-lockfile --silent",
     "test": "jest src",
     "build": "tsc",
     "start": "yarn ts-node -r dotenv/config src"

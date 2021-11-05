@@ -1,0 +1,44 @@
+name: Test
+
+on: [pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+
+    - name: Install NPM packages
+      run: yarn ci
+
+    - name: Build project
+      run: yarn build
+    
+    - name: Test project
+      run: yarn test
+  
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Build project
+      run: yarn build
+    
+    - name: Build Docker Container
+      run: yarn build
+    
+    - name: Docker Setup Buildx
+      uses: docker/setup-buildx-action@v1.6.0
+
+    - name: Run Semantic Release
+      run: yarn release
+      
