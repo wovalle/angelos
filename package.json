@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest src",
     "build": "tsc",
     "start": "yarn ts-node -r dotenv/config src"
   },

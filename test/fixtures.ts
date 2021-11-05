@@ -5,6 +5,12 @@ type ContainerMockData = {
   labels: Record<string, string>;
 };
 
+type RouterMockData = {
+  status?: string;
+  provider?: string;
+  host: string | string[];
+};
+
 type DNSRecordMock = {
   id?: string;
   name: string;
@@ -116,3 +122,19 @@ export const getCloudflareRecordsMock = (data: DNSRecordMock[]) => ({
     total_pages: 1,
   },
 });
+
+const mapBackTicks = (host: string) => "`" + host + "`";
+
+export const getTraefikMock = ({ status, provider, host }: RouterMockData) => ({
+  entryPoints: ["traefik"],
+  service: "api@internal",
+  rule: `Host(${Array.isArray(host) ? host.map(mapBackTicks).join(", ") : mapBackTicks(host)})`,
+  priority: 2147483646,
+  status: status ?? "active",
+  using: ["traefik"],
+  name: "api@internal",
+  provider: provider ?? "docker",
+});
+
+export const getTraefikRecordsMock = (data: RouterMockData[]) => data.map((d) => getTraefikMock(d));
+

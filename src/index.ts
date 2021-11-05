@@ -5,7 +5,8 @@ import { makeScheduler } from "./scheduler";
 import { version } from "../package.json";
 import env from "./env";
 import { CloudflareApi } from "./cloudflare";
-import { DockerApi } from "./docker";
+import { DockerClient } from "./docker";
+import { TraefikClient } from "./traefik";
 
 const logger = new Logger({
   setCallerAsLoggerName: true,
@@ -16,15 +17,18 @@ const logger = new Logger({
 
 const cloudflareClient = new CloudflareApi(logger.getChildLogger({ name: "CloudflareApi" }));
 
-const dockerClient = new DockerApi(logger.getChildLogger({ name: "DockerApi" }));
-
 const scheduler = makeScheduler(logger.getChildLogger({ name: "Scheduler" }));
+
+const providerClient =
+  env.provider === "docker"
+    ? new DockerClient(logger.getChildLogger())
+    : new TraefikClient(logger.getChildLogger());
 
 const { syncResources, scheduleAddDnsRecord, scheduleDeleteDnsRecord } = makeOperations({
   logger: logger.getChildLogger({ name: "SyncResources" }),
   scheduler,
   cloudflareClient,
-  dockerClient,
+  providerClient,
   deleteDnsRecordDelay: env.deleteDnsRecordDelay,
   addDnsRecordDelay: env.addDnsRecordDelay,
 });
@@ -34,22 +38,22 @@ logger.info(`Dry Run=${env.dryRun}`);
 logger.info(`Log Level=${env.logLevel}`);
 logger.info(`Delete DNS Record Delay=${env.deleteDnsRecordDelay}`);
 logger.info(`Add DNS Record Delay=${env.addDnsRecordDelay}`);
+logger.info(`Provider=${env.provider}`);
+
+if (env.provider === "docker") {
+  logger.info(`Docker Label Hostname=${env.dockerLabelHostname}`);
+  logger.info(`Docker Label Enable=${env.dockerLabelEnable}`);
+} else {
+  logger.info(`Traefik Api Url=${env.traefikApiUrl}`);
+  logger.info(`Traefik Poll Interval=${env.traefikPollInterval}`);
+}
 
 // Test your external dependencies
-// await dockerClient.testConnection()
+// await providerClient.testConnection()
 // await cloudflareClient.testConnection()
-// Subscribe to container changes
 
-dockerClient.subscribeToChanges((eventType, host) => {
-  switch (eventType) {
-    case "AddDnsRecord": {
-      scheduleAddDnsRecord(host);
-    }
-    case "DeleteDnsRecord": {
-      scheduleDeleteDnsRecord(host);
-    }
-  }
-});
+// Subscribe to container changes
+providerClient.subscribeToChanges({ scheduleAddDnsRecord, scheduleDeleteDnsRecord, scheduler });
 
 // Call SyncResources once
 const syncResourcesJob = syncResources();

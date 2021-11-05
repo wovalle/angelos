@@ -1,16 +1,16 @@
 import { DNSRecord } from "@cloudflare/types";
 import type { Logger } from "tslog";
 import type { CloudflareApi } from "./cloudflare";
-import type { DockerApi } from "./docker";
 
 import { Scheduler } from "./scheduler";
+import { IMetadataProvider } from "./types";
 import { throwFatal } from "./utils";
 
 type OperationParams = {
   logger: Logger;
   scheduler: Scheduler;
   cloudflareClient: CloudflareApi;
-  dockerClient: DockerApi;
+  providerClient: IMetadataProvider;
   addDnsRecordDelay: number;
   deleteDnsRecordDelay: number;
 };
@@ -64,13 +64,13 @@ export const makeOperations = (opts: OperationParams) => {
   };
 
   const syncResources = async () => {
-    const { cloudflareClient, dockerClient, logger } = opts;
+    const { cloudflareClient, providerClient: dockerClient, logger } = opts;
 
     const cloudflareRecords = await cloudflareClient
       .fetchCNameRecords()
       .catch((e) => throwFatal(logger, e));
 
-    const dcHosts = await dockerClient.getDockerContainerHosts();
+    const dcHosts = await dockerClient.getHosts();
 
     const { recordsInCloudflareButNotDocker, recordsInDockerButNotCloudFlare } = diff(
       cloudflareRecords,

@@ -7,7 +7,7 @@ type Job = {
   timerId: NodeJS.Timeout;
 };
 
-type JobType = "AddDnsRecord" | "RemoveDnsRecord" | "PullResources" | "DockerEvents";
+type JobType = "AddDnsRecord" | "RemoveDnsRecord" | "PullResources" | "TraefikEvents";
 
 const makeScheduler = (logger: Logger) => {
   const jobsRegistry: Map<string, Job> = new Map();

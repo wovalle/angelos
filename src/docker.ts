@@ -1,6 +1,7 @@
 import type { Logger } from "tslog";
 import env from "./env";
 import Docker from "dockerode";
+import { IMetadataProvider } from "./types";
 
 interface DockerEvent {
   status: string;
@@ -24,7 +25,7 @@ interface DockerEvent {
   timeNano: BigInt;
 }
 
-export class DockerApi {
+export class DockerClient implements IMetadataProvider {
   private labelHostname: string;
   private labelEnable: string;
   private dockerClient: Docker;
@@ -33,6 +34,7 @@ export class DockerApi {
     this.labelHostname = env.dockerLabelHostname;
     this.labelEnable = env.dockerLabelEnable;
     this.dockerClient = new Docker();
+    logger.setSettings({ name: "DockerClient" });
   }
 
   testConnection = async () => {
@@ -51,11 +53,15 @@ export class DockerApi {
 
   getContainers = async () => {
     const containers = await this.dockerClient.listContainers();
-    const filteredContainer = containers.filter((c) => c.Labels[this.labelHostname]);
+    const filteredContainer = containers.filter((c) => {
+      return (
+        this.getHost(c.Labels) && (this.labelEnable ? c.Labels[this.labelEnable] === "true" : true)
+      );
+    });
 
     this.logger.debug(
       "[Get Docker Containers]",
-      filteredContainer.map((c) => [c.Id, c.Labels[this.labelHostname]])
+      filteredContainer.map((c) => [c.Id, this.getHost(c.Labels)])
     );
 
     this.logger.silly("[Get Docker Containers Raw]", containers);
@@ -67,15 +73,16 @@ export class DockerApi {
     return labels[this.labelHostname];
   }
 
-  getDockerContainerHosts = async () => {
+  getHosts = async () => {
     const containers = await this.getContainers();
 
     return containers.map((c) => this.getHost(c.Labels));
   };
 
-  subscribeToChanges = (
-    callback: (eventType: "AddDnsRecord" | "DeleteDnsRecord", host: string) => void
-  ) => {
+  subscribeToChanges = (opts: {
+    scheduleAddDnsRecord: (hostname: string) => void;
+    scheduleDeleteDnsRecord: (hostname: string) => void;
+  }) => {
     this.dockerClient.getEvents(
       { filters: { event: ["start", "stop", "kill", "die"] } },
       (error, stream) => {
@@ -90,7 +97,11 @@ export class DockerApi {
           this.logger.info("[Docker Event]", event.status, hostname);
           this.logger.silly("[Docker Event]", event);
 
-          callback(event.status === "start" ? "AddDnsRecord" : "DeleteDnsRecord", hostname);
+          if (event.status === "start") {
+            opts.scheduleAddDnsRecord(hostname);
+          } else {
+            opts.scheduleDeleteDnsRecord(hostname);
+          }
         });
       }
     );

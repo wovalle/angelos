@@ -11,6 +11,10 @@ const throwIfUndefined = (key: string): string => {
 };
 
 const parseBoolean = (key: string, val: unknown) => {
+  if (typeof val === "boolean") {
+    return val;
+  }
+
   if (typeof val !== "string" || !["true", "false"].includes(val)) {
     val;
     throw new Error(`Invalid Boolean field: ${key}=${val}`);
@@ -20,6 +24,10 @@ const parseBoolean = (key: string, val: unknown) => {
 };
 
 const parseNumber = (key: string, val: unknown) => {
+  if (typeof val === "number") {
+    return val;
+  }
+
   if (typeof val !== "string" || Number.isNaN(Number.parseInt(val))) {
     throw new Error(`Invalid Number field: ${key}=${val}`);
   }
@@ -27,41 +35,55 @@ const parseNumber = (key: string, val: unknown) => {
   return Number.parseInt(val);
 };
 
-const withDefault = <T>(key: string, def: T, fn?: (key: string, val: string) => T): T => {
+function getValue(key: string): string | undefined;
+function getValue<K>(key: string, fn: (key: string, val?: string) => K): K | undefined;
+function getValue<K>(key: string, fn?: (key: string, val?: string) => K): any {
   const envVar = process.env[key];
 
-  if (!envVar) {
-    return def;
-  }
-
-  if (typeof fn !== "undefined" && (typeof def === "boolean" || typeof def === "number")) {
+  if (typeof fn !== "undefined") {
     return fn(key, envVar);
   }
 
-  return envVar as any;
-};
+  return envVar;
+}
+
+function withDefault(key: string, def: string): string;
+function withDefault<K>(key: string, def: K, fn: (key: string, val?: string) => K): K;
+function withDefault<K>(key: string, def: any, fn?: (key: string, val?: string) => K): any {
+  const value = getValue(key) ?? def;
+
+  return fn ? fn(key, value) : value;
+}
 
 const validLogLevels = ["silly", "trace", "debug", "info", "warn", "error", "fatal"];
 const validProviders = ["docker", "traefik"];
 
-const withAllowedValues = (allowed: string[]) => (key: string, val: string) => {
-  if (!allowed.includes(val)) {
+const withAllowedValues = (allowed: string[]) => (key: string, val?: string) => {
+  if (!val || !allowed.includes(val)) {
     throw new Error(`Invalid ${key}=${val}. Must be one of: ${allowed.join(", ")}`);
   }
   return val;
 };
 
+const provider = withDefault("PROVIDER", "docker", withAllowedValues(validProviders));
+
 export default {
   cloudflareZoneId: throwIfUndefined("CLOUDFLARE_ZONE_ID"),
   cloudflareApiToken: throwIfUndefined("CLOUDFLARE_API_TOKEN"),
   cloudflareTunnelUrl: throwIfUndefined("CLOUDFLARE_TUNNEL_URL"),
-  dockerSock: withDefault("DOCKER_SOCK", "/var/run/docker.sock"),
-  dockerApiHost: withDefault("DOCKER_API_HOST", "http://localhost/v1.41"),
   dockerLabelHostname: withDefault("DOCKER_LABEL_HOSTNAME", "angelos.hostname"),
   dockerLabelEnable: withDefault("DOCKER_LABEL_ENABLE", "angelos.enabled"),
   logLevel: withDefault("LOG_LEVEL", "info", withAllowedValues(validLogLevels)) as TLogLevelName,
   dryRun: withDefault("DRY_RUN", false, parseBoolean),
-  deleteDnsRecordDelay: withDefault("DELETE_DNS_RECORD_DELAY", 1000 * 60 * 5, parseNumber),
-  addDnsRecordDelay: withDefault("ADD_DNS_RECORD_DELAY", 1000 * 60 * 1, parseNumber),
-  provider: withDefault("PROVIDER", "docker", withAllowedValues(validProviders)),
+  deleteDnsRecordDelay: withDefault("DELETE_DNS_RECORD_DELAY", 60 * 5, parseNumber),
+  addDnsRecordDelay: withDefault("ADD_DNS_RECORD_DELAY", 60 * 1, parseNumber),
+  provider,
+  traefikApiUrl: getValue("TRAEFIK_API_URL", (key, val) => {
+    if (provider === "traefik" && !val) {
+      throw new Error(`${key} is required when provider=traefik`);
+    }
+
+    return val;
+  }),
+  traefikPollInterval: withDefault("TRAEFIK_POLL_INTERVAL", 60 * 10, parseNumber),
 };
