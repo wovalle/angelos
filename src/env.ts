@@ -70,7 +70,19 @@ const provider = withDefault("PROVIDER", "docker", withAllowedValues(validProvid
 export default {
   cloudflareZoneId: throwIfUndefined("CLOUDFLARE_ZONE_ID"),
   cloudflareApiToken: throwIfUndefined("CLOUDFLARE_API_TOKEN"),
-  cloudflareTunnelUrl: throwIfUndefined("CLOUDFLARE_TUNNEL_URL"),
+  cloudflareTunnelUrl: getValue("CLOUDFLARE_TUNNEL_URL", (key, val) => {
+    throwIfUndefined(key);
+
+    if (val?.startsWith("http")) {
+      throw new Error("Tunnel url cannot contain the protocol. Remove http/https");
+    }
+
+    if (!val?.endsWith("cfargotunnel.com")) {
+      throw new Error("Tunnel url must end in cfargotunnel.com");
+    }
+
+    return val;
+  }),
   dockerLabelHostname: withDefault("DOCKER_LABEL_HOSTNAME", "angelos.hostname"),
   dockerLabelEnable: withDefault("DOCKER_LABEL_ENABLE", "angelos.enabled"),
   logLevel: withDefault("LOG_LEVEL", "info", withAllowedValues(validLogLevels)) as TLogLevelName,
