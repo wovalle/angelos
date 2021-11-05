@@ -1,6 +1,6 @@
 {
   "name": "angelos",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "src/index.js",
   "scripts": {
@@ -14,12 +14,14 @@
     "@babel/preset-env": "^7.15.8",
     "@babel/preset-typescript": "^7.15.0",
     "@cloudflare/types": "^6.10.0",
+    "@eclass/semantic-release-docker": "^2.0.0",
     "@tsconfig/node16": "^1.0.2",
     "@types/dockerode": "^3.3.0",
     "@types/jest": "^27.0.2",
     "dotenv": "^10.0.0",
     "jest": "^27.3.1",
     "msw": "^0.35.0",
+    "semantic-release": "^18.0.0",
     "ts-jest-mock": "^1.1.0",
     "typescript": "^4.4.4"
   },
@@ -29,5 +31,33 @@
     "nanoid": "^3.1.30",
     "ts-node": "^10.4.0",
     "tslog": "^3.2.2"
+  },
+  "release": {
+    "branches": [
+      "main",
+      "next"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/github",
+      [
+        "@eclass/semantic-release-docker",
+        {
+          "baseImageName": "angelos",
+          "registries": [
+            {
+              "url": "ghcr.io",
+              "imageName": "ghcr.io/wovalle/angelos",
+              "user": "GITHUB_USER",
+              "password": "GITHUB_TOKEN"
+            }
+          ],
+          "additionalTags": [
+            "next"
+          ]
+        }
+      ]
+    ]
   }
 }
