@@ -36,4 +36,4 @@ jobs:
       run: yarn release
       env:
          GITHUB_USER: wovalle
-         GITHUB_TOKEN: ${{secrets.GH_ACCESS_TOKEN}}
+         GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
