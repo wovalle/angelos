@@ -1,9 +1,11 @@
-name: Docker Publish
+name: Docker Publish On Demand
 
-# Controls when the action will run. 
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
-  create:
+  workflow_dispatch:
+    inputs:
+        version:
+          description: 'Version to push'     
+          required: true
 
 jobs:
   docker-publish:
@@ -13,10 +15,8 @@ jobs:
 
     - name: Checkout
       uses: actions/checkout@v2
-
-    - name: Get the version
-      id: get_version
-      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      with:
+        ref: tags/${{ github.event.inputs.version }}
 
     - name: Install Node.js
       uses: actions/setup-node@v2
