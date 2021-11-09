@@ -15,7 +15,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
       with:
-        ref: tags/${{ github.event.inputs.version }}
+        ref: ${{ github.event.inputs.version }}
 
     - name: Install Node.js
       uses: actions/setup-node@v2
