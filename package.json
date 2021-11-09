@@ -16,7 +16,6 @@
     "@babel/preset-env": "^7.15.8",
     "@babel/preset-typescript": "^7.15.0",
     "@cloudflare/types": "^6.10.0",
-    "@eclass/semantic-release-docker": "^2.0.0",
     "@tsconfig/node16": "^1.0.2",
     "@types/dockerode": "^3.3.0",
     "@types/jest": "^27.0.2",
@@ -42,24 +41,7 @@
     "plugins": [
       "@semantic-release/commit-analyzer",
       "@semantic-release/release-notes-generator",
-      "@semantic-release/github",
-      [
-        "@eclass/semantic-release-docker",
-        {
-          "baseImageName": "angelos",
-          "registries": [
-            {
-              "url": "ghcr.io",
-              "imageName": "ghcr.io/wovalle/angelos",
-              "user": "GITHUB_USER",
-              "password": "GITHUB_TOKEN"
-            }
-          ],
-          "additionalTags": [
-            "next"
-          ]
-        }
-      ]
+      "@semantic-release/github"
     ]
   }
 }

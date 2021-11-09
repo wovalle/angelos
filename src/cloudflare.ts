@@ -8,6 +8,13 @@ type CloudflareResponse<T> = {
   success: boolean;
   errors: { code: number; message: string };
   result: T;
+  result_info: {
+    page: number;
+    per_page: number;
+    count: number;
+    total_count: number;
+    total_pages: number;
+  };
 };
 
 export class CloudflareApi {
@@ -49,7 +56,7 @@ export class CloudflareApi {
   };
 
   fetchCNameRecords = async (): Promise<DNSRecord[]> => {
-    const query = "type=CNAME";
+    const query = "type=CNAME&per_page=100";
     const response = await this.client.get<CloudflareResponse<DNSRecord[]>>(
       `zones/${this.zone}/dns_records?${query}`
     );
@@ -98,7 +105,7 @@ export class CloudflareApi {
   };
 
   deleteRecord = async (id: string): Promise<void> => {
-    const url = `zones/${this.zone}/dns_recordss/${id}`;
+    const url = `zones/${this.zone}/dns_records/${id}`;
 
     if (env.dryRun) {
       this.logger.info(
