@@ -30,13 +30,13 @@ In Greek mythology, Angelos (Ancient Greek: Ἄγγελος) was the first daugh
 
 
 ##  Configuration
-Ang
+Angelos supports the following environment variables.
 
 | Env Var | Default | Description  |
 | ------------- |-------------| -----|
-| CLOUDFLARE_ZONE_ID  *    | `N/A` | Zone id where your domain is|
-| CLOUDFLARE_API_TOKEN  *    | `N/A` | CF Api Token with edit DNS Record Permission. See [here](https://github.com/wovalle/angelos/discussions/4)|
-| CLOUDFLARE_TUNNEL_URL  *    | `N/A` | Your [tunnel url](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide) that should follow `uuid.cfargotunnel.com` |
+| CLOUDFLARE_ZONE_ID `*` | `N/A` | Zone id where your domain is|
+| CLOUDFLARE_API_TOKEN `*` | `N/A` | CF Api Token with edit DNS Record Permission. See [here](https://github.com/wovalle/angelos/discussions/4)|
+| CLOUDFLARE_TUNNEL_URL  `*` | `N/A` | Your [tunnel url](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide) that should follow `uuid.cfargotunnel.com` |
 | PROVIDER     | `docker` | Supported values: `docker`, `traefik`. If provider=`docker` you must pass a docker sock (see docker example) if provider=`traefik` you must pass `TRAEFIK_API_URL` |
 | DOCKER_LABEL_HOSTNAME     | `angelos.hostname` | Which docker label will angelos use as a hostname  |
 | DOCKER_LABEL_ENABLE     | `angelos.enabled` | If set to false, the service will be ignored   |
@@ -46,7 +46,7 @@ Ang
 | ADD_DNS_RECORD_DELAY     | 60 | How many seconds it'll wait to create a dns record in cf (in case you removed a service by mistake) |
 | TRAEFIK_API_URL     | `N/A` | If provider=`traefik` this must point to Traefik's [api url](https://doc.traefik.io/traefik/operations/api/) |
 | TRAEFIK_POLL_INTERVAL     | 600 | Indicates how often (in seconds) angelos will check traefik routers  |
-
+`*` Required
 
 ### Running with Docker
 ```bash
