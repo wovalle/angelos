@@ -23,8 +23,17 @@ jobs:
     - name: Build project
       run: yarn build
     
-    - name: Run Semantic Release
-      run: yarn release
+    - name: Action For Semantic Release
+      uses: cycjimmy/semantic-release-action@v2.6.0
+      with: 
+        semantic_version: 18
       env:
-         GITHUB_USER: wovalle
-         GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Do something when a new release published
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: |
+        echo ${{ steps.semantic.outputs.new_release_version }}
+        echo ${{ steps.semantic.outputs.new_release_major_version }}
+        echo ${{ steps.semantic.outputs.new_release_minor_version }}
+        echo ${{ steps.semantic.outputs.new_release_patch_version }}
