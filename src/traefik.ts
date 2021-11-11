@@ -1,5 +1,5 @@
 import type { Logger } from "tslog";
-import env from "./env";
+import { getEnvVars } from "./env";
 import { IMetadataProvider } from "./types";
 import { getAxiosInstance } from "./utils";
 import { Axios } from "axios";
@@ -26,7 +26,7 @@ export class TraefikClient implements IMetadataProvider {
 
   constructor(private logger: Logger) {
     this.client = getAxiosInstance(logger, {
-      baseURL: env.traefikApiUrl,
+      baseURL: getEnvVars().traefikApiUrl,
     });
     logger.setSettings({ name: "TraefikClient" });
   }
@@ -70,7 +70,9 @@ export class TraefikClient implements IMetadataProvider {
   }) => {
     this.logger.info(
       "[Traefik]",
-      `Traefik doesn't have live events so we're polling every ${env.traefikPollInterval} seconds`
+      `Traefik doesn't have live events so we're polling every ${
+        getEnvVars().traefikPollInterval
+      } seconds`
     );
 
     opts.scheduler.scheduleIntervalJob({
@@ -92,7 +94,7 @@ export class TraefikClient implements IMetadataProvider {
           toDelete.forEach((h) => opts.scheduleDeleteDnsRecord(h));
         }
       },
-      intervalTimeInSeconds: env.traefikPollInterval,
+      intervalTimeInSeconds: getEnvVars().traefikPollInterval,
     });
   };
 }

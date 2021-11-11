@@ -3,10 +3,12 @@ import { Logger } from "tslog";
 
 import { makeScheduler } from "./scheduler";
 import { version } from "../package.json";
-import env from "./env";
+import { getEnvVars } from "./env";
 import { CloudflareApi } from "./cloudflare";
 import { DockerClient } from "./docker";
 import { TraefikClient } from "./traefik";
+
+const env = getEnvVars();
 
 const logger = new Logger({
   setCallerAsLoggerName: true,

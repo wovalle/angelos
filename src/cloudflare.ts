@@ -2,7 +2,7 @@ import { Axios } from "axios";
 import type { Logger } from "tslog";
 import type { DNSRecord } from "@cloudflare/types";
 import { getAxiosInstance } from "./utils";
-import env from "./env";
+import { getEnvVars } from "./env";
 
 type CloudflareResponse<T> = {
   success: boolean;
@@ -25,9 +25,11 @@ export class CloudflareApi {
   private cache: DNSRecord[];
 
   constructor(private logger: Logger) {
-    this.token = env.cloudflareApiToken;
-    this.zone = env.cloudflareZoneId;
-    this.tunnelUrl = env.cloudflareTunnelUrl;
+    const { cloudflareApiToken, cloudflareZoneId, cloudflareTunnelUrl } = getEnvVars();
+
+    this.token = cloudflareApiToken;
+    this.zone = cloudflareZoneId;
+    this.tunnelUrl = cloudflareTunnelUrl;
     this.cache = [];
 
     this.client = getAxiosInstance(logger, {
@@ -86,7 +88,7 @@ export class CloudflareApi {
       proxied: true,
     };
 
-    if (env.dryRun) {
+    if (getEnvVars().dryRun) {
       this.logger.info(
         "[DNS Record Create]",
         "Skipping DNS Record Create because Dry Run mode is true",
@@ -107,7 +109,7 @@ export class CloudflareApi {
   deleteRecord = async (id: string): Promise<void> => {
     const url = `zones/${this.zone}/dns_records/${id}`;
 
-    if (env.dryRun) {
+    if (getEnvVars().dryRun) {
       this.logger.info(
         "[DNS Record Create]",
         "Skipping DNS Record Create because Dry Run mode is true",

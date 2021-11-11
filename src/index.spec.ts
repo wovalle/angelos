@@ -11,11 +11,21 @@ import { CloudflareApi } from "./cloudflare";
 import { DockerClient } from "./docker";
 import { TraefikClient } from "./traefik";
 import { getMockLogger } from "../test/testUtils";
+import * as env from "./env";
 
-jest.mock("./env", () => ({
+jest.spyOn(env, "getEnvVars").mockImplementation(() => ({
   traefikApiUrl: "http://traefik.angelos.com/api",
   dockerLabelHostname: "angelos.hostname",
   dockerLabelEnable: "angelos.enabled",
+  addDnsRecordDelay: expect.any(Number),
+  cloudflareApiToken: expect.any(String),
+  cloudflareTunnelUrl: expect.any(String),
+  cloudflareZoneId: expect.any(String),
+  deleteDnsRecordDelay: expect.any(Number),
+  dryRun: expect.any(Boolean),
+  logLevel: expect.any(String),
+  provider: expect.any(String),
+  traefikPollInterval: expect.any(Number),
 }));
 
 const mswServer = setupServer(

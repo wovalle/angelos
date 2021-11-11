@@ -1,5 +1,5 @@
 import type { Logger } from "tslog";
-import env from "./env";
+import { getEnvVars } from "./env";
 import Docker from "dockerode";
 import { IMetadataProvider } from "./types";
 
@@ -31,8 +31,10 @@ export class DockerClient implements IMetadataProvider {
   private dockerClient: Docker;
 
   constructor(private logger: Logger) {
-    this.labelHostname = env.dockerLabelHostname;
-    this.labelEnable = env.dockerLabelEnable;
+    const { dockerLabelHostname, dockerLabelEnable } = getEnvVars();
+
+    this.labelHostname = dockerLabelHostname;
+    this.labelEnable = dockerLabelEnable;
     this.dockerClient = new Docker();
     logger.setSettings({ name: "DockerClient" });
   }

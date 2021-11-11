@@ -20,7 +20,7 @@
 
 ## About The Project
 
-In Greek mythology, Angelos (Ancient Greek: Ἄγγελος) was the first daughter of Zeus and [Hera](https://github.com/aschzero/hera). 
+In Greek mythology, Angelos (Ancient Greek: Ἄγγελος) was the first daughter of Zeus and [Hera](https://github.com/aschzero/hera). Let's say you
 
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -34,21 +34,25 @@ Angelos supports the following environment variables.
 
 | Env Var | Default | Description  |
 | ------------- |-------------| -----|
-| CLOUDFLARE_ZONE_ID `*` | `N/A` | Zone id where your domain is|
+| CLOUDFLARE_ZONE_ID `*` | `N/A` | Zone id where your cf domain is. Usually can be seen under API section after selecting a domain in your [dashboard](https://dash.cloudflare.com/) or through their [api](https://api.cloudflare.com/#zone-list-zones) |
 | CLOUDFLARE_API_TOKEN `*` | `N/A` | CF Api Token with edit DNS Record Permission. See [here](https://github.com/wovalle/angelos/discussions/4)|
 | CLOUDFLARE_TUNNEL_URL  `*` | `N/A` | Your [tunnel url](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide) that should follow `uuid.cfargotunnel.com` |
-| PROVIDER     | `docker` | Supported values: `docker`, `traefik`. If provider=`docker` you must pass a docker sock (see docker example) if provider=`traefik` you must pass `TRAEFIK_API_URL` |
-| DOCKER_LABEL_HOSTNAME     | `angelos.hostname` | Which docker label will angelos use as a hostname  |
-| DOCKER_LABEL_ENABLE     | `angelos.enabled` | If set to false, the service will be ignored   |
-| LOG_LEVEL     | `info` | Possible values: `silly`, `trace`, `debug`, `info`, `warn`, `error`, `fatal` 
-| DRY_RUN     | false | If set to true, Angelos will not create or delete DNS records |
-| DELETE_DNS_RECORD_DELAY     | 300 | How many seconds it'll wait to delete a dns record in cf (in case you removed a service by mistake) |
-| ADD_DNS_RECORD_DELAY     | 60 | How many seconds it'll wait to create a dns record in cf (in case you removed a service by mistake) |
-| TRAEFIK_API_URL     | `N/A` | If provider=`traefik` this must point to Traefik's [api url](https://doc.traefik.io/traefik/operations/api/) |
-| TRAEFIK_POLL_INTERVAL     | 600 | Indicates how often (in seconds) angelos will check traefik routers  |
+| PROVIDER | `docker` | Supported values: `docker`, `traefik`. If provider=`docker` you must pass a docker sock (see [docker](#docker) example) if provider=`traefik` you must pass `TRAEFIK_API_URL` |
+| DOCKER_LABEL_HOSTNAME | `angelos.hostname` | Which docker label will angelos use as a hostname|
+| DOCKER_LABEL_ENABLE | `angelos.enabled` | If set to false, the service will be ignored |
+| LOG_LEVEL | `info` | Possible values: `silly`, `trace`, `debug`, `info`, `warn`, `error`, `fatal` 
+| DRY_RUN | false | If set to true, Angelos will not create or delete DNS records |
+| DELETE_DNS_RECORD_DELAY | 300 | How many seconds it'll wait to delete a dns record in cf (in case you removed a service by mistake) |
+| ADD_DNS_RECORD_DELAY | 60 | How many seconds it'll wait to create a dns record in cf (in case you removed a service by mistake) |
+| TRAEFIK_API_URL | `N/A` | If provider=`traefik` this must point to Traefik's [api url](https://doc.traefik.io/traefik/operations/api/) |
+| TRAEFIK_POLL_INTERVAL | 600 | Indicates how often (in seconds) angelos will check traefik routers|
+
 `*` Required
 
+<div id="docker"></div>
+
 ### Running with Docker
+
 ```bash
 docker run \
 -e CLOUDFLARE_ZONE_ID=<cloudflare zone> \ # Required
@@ -72,6 +76,34 @@ angelos:
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock # if provider=docker
 ```
+
+### Running manually
+Angelos is a typescript project. You'll need [node 14](https://nodejs.org/en/) or later.
+
+- Clone the project from github:
+
+```bash
+git clone git@github.com:wovalle/angelos.git
+```
+
+- Install the dependencies:
+
+```bash
+yarn # or npm install
+```
+
+- Create a credentials file
+```
+Copy the existing .env.example and name it .env
+```
+
+- Run the project
+```bash
+yarn start # or npm start
+```
+
+- Have fun!
+
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
