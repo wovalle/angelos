@@ -1,12 +1,12 @@
 import { TLogLevelName } from "tslog";
 import { pipeInto } from "ts-functional-pipe";
 
-enum Provider {
+export enum Provider {
   Docker = "docker",
   Traefik = "traefik",
 }
 
-enum LogLevel {
+export enum LogLevel {
   Silly = "silly",
   Trace = "trace",
   Debug = "debug",
@@ -62,9 +62,9 @@ export const def =
 export const allowed =
   <T>(allowed: T) =>
   ({ key, val }: TEnvVarObj) => {
-    if (!val || !(val in allowed)) {
-      const vals = Object.values(allowed).join(", ");
-      throw new Error(`Invalid ${key}=${val}. Must be one of: ${vals}`);
+    const values = Object.values(allowed);
+    if (!val || !values.includes(val)) {
+      throw new Error(`Invalid ${key}=${val}. Must be one of: ${values.join(", ")}`);
     }
     return { key, val };
   };
@@ -73,10 +73,22 @@ const validateTraefikApiUrl =
   (provider: Provider) =>
   ({ key, val }: TEnvVarObj) => {
     if (provider === Provider.Traefik && !val) {
-      throw new Error(`${key} is required when provider=traefik`);
+      throw new Error(`${key} is required when PROVIDER=traefik`);
     }
     return { key, val };
   };
+
+const validateCloudflareTunnelUrl = ({ key, val }: TEnvVarObj) => {
+  if (val?.startsWith("http")) {
+    throw new Error(`${key} cannot contain the protocol. Remove http/https`);
+  }
+
+  if (!val?.endsWith("cfargotunnel.com")) {
+    throw new Error(`${key} must end in cfargotunnel.com`);
+  }
+
+  return { val, key };
+};
 
 export const getEnvVars = () => {
   const provider = pipeInto(getEnvVar("PROVIDER"), def("docker"), allowed(Provider))
@@ -85,21 +97,11 @@ export const getEnvVars = () => {
   return {
     cloudflareZoneId: pipeInto(getEnvVar("CLOUDFLARE_ZONE_ID"), required).val,
     cloudflareApiToken: pipeInto(getEnvVar("CLOUDFLARE_API_TOKEN"), required).val,
-    cloudflareTunnelUrl: pipeInto(getEnvVar("CLOUDFLARE_TUNNEL_URL"), ({ key, val }) => {
-      if (!val) {
-        throw new Error(`${key} is required`);
-      }
-
-      if (val?.startsWith("http")) {
-        throw new Error(`${key} cannot contain the protocol. Remove http/https`);
-      }
-
-      if (!val?.endsWith("cfargotunnel.com")) {
-        throw new Error(`${key} must end in cfargotunnel.com`);
-      }
-
-      return val;
-    }),
+    cloudflareTunnelUrl: pipeInto(
+      getEnvVar("CLOUDFLARE_TUNNEL_URL"),
+      required,
+      validateCloudflareTunnelUrl
+    ).val,
     dockerLabelHostname: pipeInto(getEnvVar("DOCKER_LABEL_HOSTNAME"), def("angelos.hostname")).val,
     dockerLabelEnable: pipeInto(getEnvVar("DOCKER_LABEL_ENABLE"), def("angelos.enabled")).val,
     logLevel: pipeInto(getEnvVar("LOG_LEVEL"), def("info"), allowed(LogLevel)).val as TLogLevelName,
