@@ -105,7 +105,7 @@ export const getEnvVars = () => {
     dockerLabelHostname: pipeInto(getEnvVar("DOCKER_LABEL_HOSTNAME"), def("angelos.hostname")).val,
     dockerLabelEnable: pipeInto(getEnvVar("DOCKER_LABEL_ENABLE"), def("angelos.enabled")).val,
     logLevel: pipeInto(getEnvVar("LOG_LEVEL"), def("info"), allowed(LogLevel)).val as TLogLevelName,
-    dryRun: pipeInto(getEnvVar("DOCKER_LABEL_ENABLE"), def("false"), toBool),
+    dryRun: pipeInto(getEnvVar("DOCKER_LABEL_ENABLE"), def("false"), toBool).val,
     deleteDnsRecordDelay: pipeInto(getEnvVar("DELETE_DNS_RECORD_DELAY"), def(`${60 * 5}`), toNumber)
       .val,
     addDnsRecordDelay: pipeInto(getEnvVar("ADD_DNS_RECORD_DELAY"), def(`${60 * 1}`), toNumber).val,

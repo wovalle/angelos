@@ -44,7 +44,16 @@ export class CloudflareApi {
   }
 
   testConnection = async () => {
-    const res = await this.client.get("/user/token/verify");
+    const res = await this.client.get("user/tokens/verify").catch((e: any) => {
+      this.logger.silly("[Cloudflare Token Verify Raw Error]", e);
+
+      return {
+        data: {
+          success: false,
+          error: e.message,
+        },
+      };
+    });
 
     if (!res.data.success) {
       this.logger.error("[Cloudflare Token Verify]", "Error verifying token", {
@@ -71,7 +80,7 @@ export class CloudflareApi {
     this.logger.debug(
       "[Fetch DNS Records]",
       "Dns Records fetched from cloudflare:",
-      records.map((r) => r.name)
+      records.map((r) => r.name).join(", ")
     );
 
     return records;

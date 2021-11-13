@@ -15,6 +15,7 @@ const logger = new Logger({
   displayFilePath: "hidden",
   displayFunctionName: false,
   minLevel: env.logLevel,
+  name: "main",
 });
 
 const cloudflareClient = new CloudflareApi(logger.getChildLogger({ name: "CloudflareApi" }));
@@ -35,35 +36,39 @@ const { syncResources, scheduleAddDnsRecord, scheduleDeleteDnsRecord } = makeOpe
   addDnsRecordDelay: env.addDnsRecordDelay,
 });
 
-logger.info(`Init angelos ${version}`);
-logger.info(`Dry Run=${env.dryRun}`);
-logger.info(`Log Level=${env.logLevel}`);
-logger.info(`Delete DNS Record Delay=${env.deleteDnsRecordDelay}`);
-logger.info(`Add DNS Record Delay=${env.addDnsRecordDelay}`);
-logger.info(`Provider=${env.provider}`);
+(async () => {
+  logger.info(`Init angelos ${version}`);
+  logger.info(`Dry Run=${env.dryRun}`);
+  logger.info(`Log Level=${env.logLevel}`);
+  logger.info(`Delete DNS Record Delay=${env.deleteDnsRecordDelay}`);
+  logger.info(`Add DNS Record Delay=${env.addDnsRecordDelay}`);
+  logger.info(`Provider=${env.provider}`);
 
-if (env.provider === "docker") {
-  logger.info(`Docker Label Hostname=${env.dockerLabelHostname}`);
-  logger.info(`Docker Label Enable=${env.dockerLabelEnable}`);
-} else {
-  logger.info(`Traefik Api Url=${env.traefikApiUrl}`);
-  logger.info(`Traefik Poll Interval=${env.traefikPollInterval}`);
-}
+  if (env.provider === "docker") {
+    logger.info(`Docker Label Hostname=${env.dockerLabelHostname}`);
+    logger.info(`Docker Label Enable=${env.dockerLabelEnable}`);
+  } else {
+    logger.info(`Traefik Api Url=${env.traefikApiUrl}`);
+    logger.info(`Traefik Poll Interval=${env.traefikPollInterval}`);
+  }
 
-// Test your external dependencies
-// await providerClient.testConnection()
-// await cloudflareClient.testConnection()
+  // Test your external dependencies
+  logger.info(`Test connection of Provider=${env.provider}`);
+  await providerClient.testConnection();
+  logger.info(`Test connection of Cloudflare`);
+  await cloudflareClient.testConnection();
 
-// Subscribe to container changes
-providerClient.subscribeToChanges({ scheduleAddDnsRecord, scheduleDeleteDnsRecord, scheduler });
+  // Subscribe to container changes
+  providerClient.subscribeToChanges({ scheduleAddDnsRecord, scheduleDeleteDnsRecord, scheduler });
 
-// Call SyncResources once
-const syncResourcesJob = syncResources();
+  // Call SyncResources once
+  const syncResourcesJob = syncResources();
 
-// Schedule SyncResources each hour
-scheduler.scheduleIntervalJob({
-  type: "PullResources",
-  jobId: "Pull Resources",
-  fn: () => syncResourcesJob,
-  intervalTimeInSeconds: 60 * 60,
-});
+  // Schedule SyncResources each hour
+  scheduler.scheduleIntervalJob({
+    type: "PullResources",
+    jobId: "Sync Resources",
+    fn: () => syncResourcesJob,
+    intervalTimeInSeconds: 60 * 60,
+  });
+})();

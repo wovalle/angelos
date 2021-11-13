@@ -1,13 +1,13 @@
 import type { Logger } from "tslog";
 import { logError } from "./utils";
 
+type JobType = "AddDnsRecord" | "RemoveDnsRecord" | "PullResources" | "TraefikEvents";
+
 type Job = {
   type: JobType;
   jobId: string;
   timerId: NodeJS.Timeout;
 };
-
-type JobType = "AddDnsRecord" | "RemoveDnsRecord" | "PullResources" | "TraefikEvents";
 
 const makeScheduler = (logger: Logger) => {
   const jobsRegistry: Map<string, Job> = new Map();
@@ -69,7 +69,7 @@ const makeScheduler = (logger: Logger) => {
     removeJobIfExists: (opts: { type: JobType; jobId: string }) => {
       const job = jobsRegistry.get(opts.jobId);
 
-      if (!job) {
+      if (!job || job.type !== opts.type) {
         return;
       }
 

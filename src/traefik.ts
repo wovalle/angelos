@@ -31,7 +31,19 @@ export class TraefikClient implements IMetadataProvider {
     logger.setSettings({ name: "TraefikClient" });
   }
 
-  testConnection = async () => {};
+  testConnection = async () => {
+    const res = await this.client.get("version").catch((e: any) => {
+      this.logger.silly("[Traefik Test Connection Raw Error]", e.response);
+
+      this.logger.fatal("[Traefik Test Connection]", "Error verifying connection", {
+        data: e.response.data,
+      });
+
+      throw new Error("Error verifying traefik connection");
+    });
+
+    this.logger.info("[Traefik Test Connection]", "Connection verified");
+  };
 
   // TODO: change with a serializable query, maybe with mongo query syntax
   getHosts = async () => {
@@ -58,7 +70,7 @@ export class TraefikClient implements IMetadataProvider {
 
     this.cache = hostsWithoutDuplicates;
 
-    this.logger.debug("[Get Traefik Hosts]", hostsWithoutDuplicates);
+    this.logger.debug("[Get Traefik Hosts]", hostsWithoutDuplicates.join(", "));
 
     return hostsWithoutDuplicates;
   };
@@ -70,14 +82,14 @@ export class TraefikClient implements IMetadataProvider {
   }) => {
     this.logger.info(
       "[Traefik]",
-      `Traefik doesn't have live events so we're polling every ${
+      `Traefik doesn't support live events so we're polling every ${
         getEnvVars().traefikPollInterval
       } seconds`
     );
 
     opts.scheduler.scheduleIntervalJob({
       type: "TraefikEvents",
-      jobId: "I don't even know why this is required",
+      jobId: "Traefik Events",
       fn: async () => {
         this.logger.info("[Traefik Events]", "Polling...");
         const hosts = await this.getHosts();
@@ -85,12 +97,20 @@ export class TraefikClient implements IMetadataProvider {
         const toDelete = this.cache.filter((h) => !hosts.includes(h));
 
         if (toAdd.length > 0) {
-          this.logger.info("[Traefik Events]", `Adding ${toAdd.length} hosts`);
+          this.logger.info(
+            "[Traefik Events]",
+            `${toAdd.length} new host(s) found: ${toAdd.join(", ")}`,
+            "Scheduling insertion..."
+          );
           toAdd.forEach((h) => opts.scheduleAddDnsRecord(h));
         }
 
         if (toDelete.length > 0) {
-          this.logger.info("[Traefik Events]", `Deleting ${toDelete.length} hosts`);
+          this.logger.info(
+            "[Traefik Events]",
+            `${toDelete.length} host(s) have been deleted: ${toDelete.join(", ")}`,
+            "Scheduling deletion..."
+          );
           toDelete.forEach((h) => opts.scheduleDeleteDnsRecord(h));
         }
       },

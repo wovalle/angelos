@@ -7,7 +7,7 @@
 
 <h3 align="center">angelos</h3>
   <p align="center">
-    Angelos automates the synchronization of <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/routing-to-tunnel/dns">DNS Records</a> between your server and cloudflare. Specially useful if you're using <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps">Cloudflare tunnels</a> to expose your services to internet
+    Angelos automates the synchronization of <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/routing-to-tunnel/dns">DNS Records</a> between your server and cloudflare. Specially useful if you're using <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-apps">Cloudflare tunnels</a> to expose your services to internet.
     <br />
     <br />
     <a href="https://github.com/wovalle/angelos/discussions/2">Roadmap</a>

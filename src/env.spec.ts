@@ -11,6 +11,7 @@ const validProviders = Object.values(env.Provider);
 
 describe("env", () => {
   let requiredEnvVars: Record<string, string> = {};
+
   beforeEach(() => {
     process.env = {};
     requiredEnvVars = Object.assign({}, defaultEnv);
@@ -31,6 +32,7 @@ describe("env", () => {
 
       it("should throw if provider=traefik and no url is passed", () => {
         process.env = { ...requiredEnvVars, TRAEFIK_API_URL: undefined, PROVIDER: "traefik" };
+
         expect(() => env.getEnvVars()).toThrowError(
           "TRAEFIK_API_URL is required when PROVIDER=traefik"
         );
@@ -40,6 +42,7 @@ describe("env", () => {
     describe("provider", () => {
       it("should throw invalid provider", () => {
         process.env = { ...requiredEnvVars, PROVIDER: "invalid" };
+
         expect(() => env.getEnvVars()).toThrowError(
           "Invalid PROVIDER=invalid. Must be one of: docker, traefik"
         );
@@ -48,6 +51,7 @@ describe("env", () => {
       describe.each(validProviders)("%s", (provider) => {
         it("should return valid provider", () => {
           process.env = { ...requiredEnvVars, PROVIDER: provider };
+
           expect(env.getEnvVars()).toEqual(expect.objectContaining({ provider }));
         });
       });
