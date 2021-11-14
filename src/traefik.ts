@@ -91,7 +91,7 @@ export class TraefikClient implements IMetadataProvider {
       type: "TraefikEvents",
       jobId: "Traefik Events",
       fn: async () => {
-        this.logger.info("[Traefik Events]", "Polling...");
+        this.logger.debug("[Traefik Events]", "Polling...");
         const hosts = await this.getHosts();
         const toAdd = hosts.filter((h) => !this.cache.includes(h));
         const toDelete = this.cache.filter((h) => !hosts.includes(h));
