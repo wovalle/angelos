@@ -21,15 +21,15 @@ export class CloudflareApi {
   private client: Axios;
   private token: string;
   private zone: string;
-  private tunnelUrl: string;
+  private tunnelId: string;
   private cache: DNSRecord[];
 
   constructor(private logger: Logger) {
-    const { cloudflareApiToken, cloudflareZoneId, cloudflareTunnelUrl } = getEnvVars();
+    const { cloudflareApiToken, cloudflareZoneId, cloudflareTunnelId } = getEnvVars();
 
     this.token = cloudflareApiToken;
     this.zone = cloudflareZoneId;
-    this.tunnelUrl = cloudflareTunnelUrl;
+    this.tunnelId = cloudflareTunnelId;
     this.cache = [];
 
     this.client = getAxiosInstance(logger, {
@@ -91,7 +91,7 @@ export class CloudflareApi {
     const data = {
       type: "CNAME",
       name,
-      content: this.tunnelUrl,
+      content: `${this.tunnelId}.cfargotunnel.com`,
       ttl: 1,
       priority: 10,
       proxied: true,
