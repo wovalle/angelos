@@ -1,2 +1,2 @@
 #!/usr/bin/with-contenv sh
-cloudflared tunnel --loglevel run ${CLOUDFLARE_TUNNEL_UUID}
+cloudflared tunnel run ${CLOUDFLARE_TUNNEL_UUID}

@@ -59,11 +59,13 @@ jobs:
       env:
         VERSION: ${{ steps.semantic.outputs.new_release_version }}
     
-    - name: Tag latest
+    - name: Tag next
       if: steps.extract_branch.outputs.branch == 'next'
       run: |
         docker tag ghcr.io/wovalle/angelos:${VERSION} ghcr.io/wovalle/angelos:next
-
+      env:
+        VERSION: ${{ steps.semantic.outputs.new_release_version }}
+    
     - name: Deploy image
       if: steps.semantic.outputs.new_release_published == 'true'
       run: |
