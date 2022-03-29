@@ -23,6 +23,7 @@ jest.spyOn(env, "getEnvVars").mockImplementation(() => ({
   deleteDnsRecordDelay: 100,
   cloudflareApiToken: "cf-api-token",
   cloudflareTunnelUrl: "uuid.cfargotunnel.com",
+  cloudflareTunnelId: "tunnel-uuid",
   cloudflareZoneId: "cf-zone-id",
   dryRun: false,
   logLevel: expect.any(String),
