@@ -15,10 +15,12 @@ type OperationParams = {
   deleteDnsRecordDelay: number;
 };
 
-const diff = (cfRecords: DNSRecord[], dockerHostNames: string[]) => {
+const diff = (cfRecords: DNSRecord[], providerHostNames: string[]) => {
   return {
-    recordsInCloudflareButNotDocker: cfRecords.filter((r) => !dockerHostNames.includes(r.name)),
-    recordsInDockerButNotCloudFlare: dockerHostNames.filter(
+    recordsInCloudflareButNotInProvider: cfRecords
+      .filter((r) => !providerHostNames.includes(r.name))
+      .map(({ id, name }) => ({ id, name })),
+    recordsInProviderButNotCloudFlare: providerHostNames.filter(
       (h) => !cfRecords.find((r) => r.name === h)
     ),
   };
@@ -64,33 +66,33 @@ export const makeOperations = (opts: OperationParams) => {
   };
 
   const syncResources = async () => {
-    const { cloudflareClient, providerClient: dockerClient, logger } = opts;
+    const { cloudflareClient, providerClient, logger } = opts;
 
     const cloudflareRecords = await cloudflareClient
       .fetchCNameRecords()
       .catch((e) => throwFatal(logger, e));
 
-    const dcHosts = await dockerClient.getHosts();
+    const providerHosts = await providerClient.getHosts();
 
-    const { recordsInCloudflareButNotDocker, recordsInDockerButNotCloudFlare } = diff(
+    const { recordsInCloudflareButNotInProvider, recordsInProviderButNotCloudFlare } = diff(
       cloudflareRecords,
-      dcHosts
+      providerHosts
     );
 
     /**
      * If apps were found in docker and are not present in cloudflare
      * it means that we have to create the dns records in cloudflare
      */
-    if (recordsInDockerButNotCloudFlare.length) {
-      recordsInDockerButNotCloudFlare.forEach((r) => scheduleAddDnsRecord(r));
+    if (recordsInProviderButNotCloudFlare.length) {
+      recordsInProviderButNotCloudFlare.forEach((r) => scheduleAddDnsRecord(r));
     }
 
     /**
      * If apps were found in Cloudflare but are not in docker
      * it means that we have to delete the dns records
      */
-    if (recordsInCloudflareButNotDocker) {
-      recordsInCloudflareButNotDocker.forEach(({ id, name }) => {
+    if (recordsInCloudflareButNotInProvider) {
+      recordsInCloudflareButNotInProvider.forEach(({ id, name }) => {
         if (!id) {
           logger.error(`Cloudflare DNS record with name=${name} doesn't have an id`);
           return;
