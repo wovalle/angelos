@@ -79,6 +79,9 @@ export const makeOperations = (opts: OperationParams) => {
       providerHosts
     );
 
+    logger.debug("[recordsInCloudflareButNotInProvider]", recordsInCloudflareButNotInProvider);
+    logger.debug("[recordsInProviderButNotCloudFlare]", recordsInProviderButNotCloudFlare);
+
     /**
      * If apps were found in docker and are not present in cloudflare
      * it means that we have to create the dns records in cloudflare
