@@ -55,10 +55,12 @@ export class TraefikClient implements IMetadataProvider {
       const hostRegex = /Host\(([^\)]*)\)/;
 
       const [_, hosts] = hostRegex.exec(rule) || ["", ""];
+
       return hosts
         .replace(/\`/g, "")
         .split(",")
-        .map((h) => h.trim());
+        .map((h) => h.trim())
+        .filter(Boolean);
     };
 
     const hosts = routers

@@ -78,15 +78,15 @@ const validateTraefikApiUrl =
     return { key, val };
   };
 
-const validateCloudflareTunnelUrl = ({ key, val }: TEnvVarObj) => {
-  if (val?.startsWith("http")) {
-    throw new Error(`${key} cannot contain the protocol. Remove http/https`);
-  }
+const validateUUID = ({ key, val }: TEnvVarObj<string>) => {
+  const isUUID = (s: string) =>
+    /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/gi.test(
+      s
+    );
 
-  if (!val?.endsWith("cfargotunnel.com")) {
-    throw new Error(`${key} must end in cfargotunnel.com`);
+  if (!isUUID(val || "")) {
+    throw new Error(`${key} is not a valid UUID`);
   }
-
   return { val, key };
 };
 
@@ -97,11 +97,7 @@ export const getEnvVars = () => {
   return {
     cloudflareZoneId: pipeInto(getEnvVar("CLOUDFLARE_ZONE_ID"), required).val,
     cloudflareApiToken: pipeInto(getEnvVar("CLOUDFLARE_API_TOKEN"), required).val,
-    cloudflareTunnelUrl: pipeInto(
-      getEnvVar("CLOUDFLARE_TUNNEL_URL"),
-      required,
-      validateCloudflareTunnelUrl
-    ).val,
+    cloudflareTunnelId: pipeInto(getEnvVar("CLOUDFLARE_TUNNEL_UUID"), required, validateUUID).val,
     dockerLabelHostname: pipeInto(getEnvVar("DOCKER_LABEL_HOSTNAME"), def("angelos.hostname")).val,
     dockerLabelEnable: pipeInto(getEnvVar("DOCKER_LABEL_ENABLE"), def("angelos.enabled")).val,
     logLevel: pipeInto(getEnvVar("LOG_LEVEL"), def("info"), allowed(LogLevel)).val as TLogLevelName,
