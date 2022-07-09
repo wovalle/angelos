@@ -58,7 +58,7 @@ const { syncResources, scheduleAddDnsRecord, scheduleDeleteDnsRecord } = makeOpe
   logger.info(`Test connection of Cloudflare`);
   await cloudflareClient.testConnection();
 
-  // Subscribe to container changes
+  // Subscribe to provider changes
   providerClient.subscribeToChanges({ scheduleAddDnsRecord, scheduleDeleteDnsRecord, scheduler });
 
   // Call SyncResources once
