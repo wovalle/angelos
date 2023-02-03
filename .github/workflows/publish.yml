@@ -2,7 +2,7 @@ name: Publish
 
 on:
   push:
-    branches: [main]
+    branches: [main, next]
 
 jobs:
   publish:
@@ -22,6 +22,10 @@ jobs:
 
     - name: Build project
       run: yarn build
+
+    - name: Extract branch name
+      id: extract_branch
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
     
     - name: Action For Semantic Release
       id: semantic
@@ -44,7 +48,21 @@ jobs:
     - name: Build image
       if: steps.semantic.outputs.new_release_published == 'true'
       run: |
-        docker build -t ghcr.io/wovalle/angelos:latest -t ghcr.io/wovalle/angelos:${VERSION} .
+        docker build -t ghcr.io/wovalle/angelos:${VERSION} .
+      env:
+        VERSION: ${{ steps.semantic.outputs.new_release_version }}
+
+    - name: Tag latest
+      if: steps.extract_branch.outputs.branch == 'main'
+      run: |
+        docker tag ghcr.io/wovalle/angelos:${VERSION} ghcr.io/wovalle/angelos:latest
+      env:
+        VERSION: ${{ steps.semantic.outputs.new_release_version }}
+    
+    - name: Tag next
+      if: steps.extract_branch.outputs.branch == 'next'
+      run: |
+        docker tag ghcr.io/wovalle/angelos:${VERSION} ghcr.io/wovalle/angelos:next
       env:
         VERSION: ${{ steps.semantic.outputs.new_release_version }}
     
