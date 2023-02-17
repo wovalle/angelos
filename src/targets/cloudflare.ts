@@ -1,8 +1,8 @@
 import { Axios } from "axios";
 import type { Logger } from "tslog";
 import type { DNSRecord } from "@cloudflare/types";
-import { getAxiosInstance } from "./utils";
-import { getEnvVars } from "./env";
+import { getAxiosInstance } from "../utils";
+import { getEnvVars } from "../env";
 
 type CloudflareResponse<T> = {
   success: boolean;

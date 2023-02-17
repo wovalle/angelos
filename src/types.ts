@@ -11,3 +11,11 @@ export interface IMetadataProvider {
     scheduler: Scheduler;
   }): void;
 }
+
+interface ITargetFoo {}
+
+export interface ITarget {
+  testConnection(): Promise<void>;
+  setup(env: any): void;
+  pull(): Promise<ITargetFoo[]>
+}

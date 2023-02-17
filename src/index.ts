@@ -4,9 +4,9 @@ import { Logger } from "tslog";
 import { makeScheduler } from "./scheduler";
 import { version } from "../package.json";
 import { getEnvVars } from "./env";
-import { CloudflareApi } from "./cloudflare";
-import { DockerClient } from "./docker";
-import { TraefikClient } from "./traefik";
+import { CloudflareApi } from "./targets";
+import { DockerClient } from "./serviceProviders/docker";
+import { TraefikClient } from "./serviceProviders/traefik";
 
 const env = getEnvVars();
 

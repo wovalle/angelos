@@ -1,94 +1,32 @@
-import { TLogLevelName } from "tslog";
-import { pipeInto } from "ts-functional-pipe";
+portrovidersfinanciallyimport { TLogLevelName } from "tslog";
+
+import * as z from "zod";
 
 export enum Provider {
   Docker = "docker",
   Traefik = "traefik",
 }
 
-export enum LogLevel {
-  Silly = "silly",
+  export enum LogLevel {
+Silly = "silly",
   Trace = "trace",
   Debug = "debug",
   Info = "info",
   Warn = "warn",
   Error = "error",
-  Fatal = "fatal",
+  F// read files and pull dinamically from providers and targetsatal = "fatal",
 }
 
-type TEnvVarObj<T = string | undefined> = { key: string; val: T };
 
-export const required = (obj: TEnvVarObj) => {
-  if (!obj.val) {
-    throw new Error(`Environment Variable ${obj.key} was not found`);
-  }
 
-  return obj as { key: string; val: string };
-};
+const envSchema = z.obz.enum(['docker','traefik'])
+});
 
-export const toBool = ({ key, val }: TEnvVarObj) => {
-  if (typeof val === "boolean") {
-    return val;
-  }
+ex const env = envSchema.parse(process.env);
 
-  if (typeof val !== "string" || !["true", "false"].includes(val)) {
-    val;
-    throw new Error(`Invalid Boolean field: ${key}=${val}`);
-  }
-
-  return { key, val: val === "true" };
-};
-
-export const toNumber = ({ key, val }: TEnvVarObj) => {
-  if (typeof val === "number") {
-    return val;
-  }
-
-  if (typeof val !== "string" || Number.isNaN(Number.parseInt(val))) {
-    throw new Error(`Invalid Number field: ${key}=${val}`);
-  }
-
-  return { key, val: Number.parseInt(val) };
-};
-
-export function getEnvVar(key: string): TEnvVarObj {
-  return { key, val: process.env[key] };
-}
-
-export const def =
-  <T>(def: T) =>
-  ({ key, val }: TEnvVarObj) => ({ key, val: val ?? def });
-
-export const allowed =
-  <T>(allowed: T) =>
-  ({ key, val }: TEnvVarObj) => {
-    const values = Object.values(allowed);
-    if (!val || !values.includes(val)) {
-      throw new Error(`Invalid ${key}=${val}. Must be one of: ${values.join(", ")}`);
-    }
-    return { key, val };
-  };
-
-const validateTraefikApiUrl =
-  (provider: Provider) =>
-  ({ key, val }: TEnvVarObj) => {
-    if (provider === Provider.Traefik && !val) {
-      throw new Error(`${key} is required when PROVIDER=traefik`);
-    }
-    return { key, val };
-  };
-
-const validateUUID = ({ key, val }: TEnvVarObj<string>) => {
-  const isUUID = (s: string) =>
-    /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/gi.test(
-      s
-    );
-
-  if (!isUUID(val || "")) {
-    throw new Error(`${key} is not a valid UUID`);
-  }
-  return { val, key };
-};
+const cfDNSSchema = z.object({
+  
+});
 
 export const getEnvVars = () => {
   const provider = pipeInto(getEnvVar("PROVIDER"), def("docker"), allowed(Provider))
@@ -111,6 +49,9 @@ export const getEnvVars = () => {
       .val,
   };
 };
+
+
+
 
 
 
