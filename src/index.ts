@@ -1,59 +1,53 @@
 import { makeOperations } from "./operations";
-import { Logger } from "tslog";
 
-import { makeScheduler } from "./scheduler";
 import { version } from "../package.json";
-import { getEnvVars } from "./env";
-import { CloudflareApi } from "./targets";
-import { DockerClient } from "./serviceProviders/docker";
-import { TraefikClient } from "./serviceProviders/traefik";
+import { env, getDockerEnv, getTraefikEnv } from "./env";
+import { makeScheduler } from "./scheduler";
 
-const env = getEnvVars();
+import { logger } from "./lib/logger";
+import { DockerClient } from "./providers/docker";
+import { TraefikClient } from "./providers/traefik";
+import { CloudflareApi } from "./targets/cloudflare";
 
-const logger = new Logger({
-  setCallerAsLoggerName: true,
-  displayFilePath: "hidden",
-  displayFunctionName: false,
-  minLevel: env.logLevel,
-  name: "main",
-});
+const cloudflareClient = new CloudflareApi(logger.getSubLogger({ name: "CloudflareApi" }));
 
-const cloudflareClient = new CloudflareApi(logger.getChildLogger({ name: "CloudflareApi" }));
-
-const scheduler = makeScheduler(logger.getChildLogger({ name: "Scheduler" }));
+const scheduler = makeScheduler(logger.getSubLogger({ name: "Scheduler" }));
 
 const providerClient =
-  env.provider === "docker"
-    ? new DockerClient(logger.getChildLogger())
-    : new TraefikClient(logger.getChildLogger());
+  env.PROVIDER === "docker"
+    ? new DockerClient(logger.getSubLogger({ name: "DockerClient" }))
+    : new TraefikClient(logger.getSubLogger({ name: "TraefikClient" }));
 
 const { syncResources, scheduleAddDnsRecord, scheduleDeleteDnsRecord } = makeOperations({
-  logger: logger.getChildLogger({ name: "SyncResources" }),
+  logger: logger.getSubLogger({ name: "SyncResources" }),
   scheduler,
   cloudflareClient,
   providerClient,
-  deleteDnsRecordDelay: env.deleteDnsRecordDelay,
-  addDnsRecordDelay: env.addDnsRecordDelay,
+  deleteDnsRecordDelay: env.DELETE_DNS_RECORD_DELAY,
+  addDnsRecordDelay: env.ADD_DNS_RECORD_DELAY,
 });
 
 (async () => {
   logger.info(`Init angelos ${version}`);
-  logger.info(`Dry Run=${env.dryRun}`);
-  logger.info(`Log Level=${env.logLevel}`);
-  logger.info(`Delete DNS Record Delay=${env.deleteDnsRecordDelay}`);
-  logger.info(`Add DNS Record Delay=${env.addDnsRecordDelay}`);
-  logger.info(`Provider=${env.provider}`);
+  logger.info(`Dry Run=${env.DRY_RUN}`);
+  logger.info(`Log Level=${env.LOG_LEVEL}`);
+  logger.info(`Delete DNS Record Delay=${env.DELETE_DNS_RECORD_DELAY}`);
+  logger.info(`Add DNS Record Delay=${env.ADD_DNS_RECORD_DELAY}`);
+  logger.info(`Provider=${env.PROVIDER}`);
 
-  if (env.provider === "docker") {
-    logger.info(`Docker Label Hostname=${env.dockerLabelHostname}`);
-    logger.info(`Docker Label Enable=${env.dockerLabelEnable}`);
+  // TODO: move to provider.setup()
+  if (env.PROVIDER === "docker") {
+    const dockerEnv = getDockerEnv();
+    logger.info(`Docker Label Hostname=${dockerEnv.DOCKER_LABEL_HOSTNAME}`);
+    logger.info(`Docker Label Enable=${dockerEnv.DOCKER_LABEL_ENABLE}`);
   } else {
-    logger.info(`Traefik Api Url=${env.traefikApiUrl}`);
-    logger.info(`Traefik Poll Interval=${env.traefikPollInterval}`);
+    const traefikEnv = getTraefikEnv();
+    logger.info(`Traefik Api Url=${traefikEnv.TRAEFIK_API_URL}`);
+    logger.info(`Traefik Poll Interval=${traefikEnv.TRAEFIK_POLL_INTERVAL}`);
   }
 
   // Test your external dependencies
-  logger.info(`Test connection of Provider=${env.provider}`);
+  logger.info(`Test connection of Provider=${env.PROVIDER}`);
   await providerClient.testConnection();
   logger.info(`Test connection of Cloudflare`);
   await cloudflareClient.testConnection();

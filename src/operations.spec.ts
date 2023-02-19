@@ -5,31 +5,14 @@ import {
   getCloudflareRecordsMock,
   getDockerContainersMock,
   getTraefikRecordsMock,
-} from "../test/fixtures";
+} from "./test/fixtures";
 
-import { CloudflareApi } from "./cloudflare";
-import { DockerClient } from "./docker";
-import { TraefikClient } from "./traefik";
-import * as env from "./env";
-import { makeScheduler, Scheduler } from "./scheduler";
-import { Logger } from "tslog";
 import { mock } from "jest-mock-extended";
-
-jest.spyOn(env, "getEnvVars").mockImplementation(() => ({
-  traefikApiUrl: "http://traefik.angelos.com/api",
-  dockerLabelHostname: "angelos.hostname",
-  dockerLabelEnable: "angelos.enabled",
-  addDnsRecordDelay: 100,
-  deleteDnsRecordDelay: 100,
-  cloudflareApiToken: "cf-api-token",
-  cloudflareTunnelUrl: "uuid.cfargotunnel.com",
-  cloudflareTunnelId: "tunnel-uuid",
-  cloudflareZoneId: "cf-zone-id",
-  dryRun: false,
-  logLevel: expect.any(String),
-  provider: expect.any(String),
-  traefikPollInterval: 100,
-}));
+import { Logger } from "./lib/logger";
+import { DockerClient } from "./providers/docker";
+import { TraefikClient } from "./providers/traefik";
+import { makeScheduler, Scheduler } from "./scheduler";
+import { CloudflareApi } from "./targets/cloudflare";
 
 const mswServer = setupServer(
   rest.get("https://api.cloudflare.com/client/v4/zones/:zoneId/dns_records", (req, res, ctx) => {
@@ -80,6 +63,7 @@ describe("operations", () => {
   });
 
   afterEach(() => mswServer.resetHandlers());
+
   afterAll(() => {
     jest.useRealTimers();
   });

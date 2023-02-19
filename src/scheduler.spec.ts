@@ -1,6 +1,6 @@
-import { makeScheduler, Scheduler } from "./scheduler";
 import { mock } from "jest-mock-extended";
-import { Logger } from "tslog";
+import { Logger } from "./lib/logger";
+import { makeScheduler, Scheduler } from "./scheduler";
 
 describe("Scheduler", () => {
   let scheduler: Scheduler;

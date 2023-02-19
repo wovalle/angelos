@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
-import { nanoid } from "nanoid";
-import type { Logger } from "tslog";
+import crypto from "node:crypto";
+import { Logger } from "./lib/logger";
 
 export const throwFatal = (logger: Logger, e: unknown, errorText?: string) => {
   if (axios.isAxiosError(e)) {
@@ -29,7 +29,7 @@ export const getAxiosInstance = (logger: Logger, config?: AxiosRequestConfig<any
   const instance = axios.create(config);
 
   instance.interceptors.request.use((config) => {
-    const requestId = nanoid();
+    const requestId = crypto.randomUUID();
 
     logger.silly(
       "[Axios Request]",

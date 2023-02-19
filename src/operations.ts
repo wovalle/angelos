@@ -1,7 +1,8 @@
 import { DNSRecord } from "@cloudflare/types";
-import type { Logger } from "tslog";
-import type { CloudflareApi } from "./cloudflare";
 
+import type { CloudflareApi } from "./targets/cloudflare";
+
+import { Logger } from "./lib/logger";
 import { Scheduler } from "./scheduler";
 import { IMetadataProvider } from "./types";
 import { throwFatal } from "./utils";

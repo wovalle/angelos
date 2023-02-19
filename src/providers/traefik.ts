@@ -1,9 +1,9 @@
-import type { Logger } from "tslog";
-import { getEnvVars } from "./env";
-import { IMetadataProvider } from "./types";
-import { getAxiosInstance } from "./utils";
 import { Axios } from "axios";
-import { Scheduler } from "./scheduler";
+import { getTraefikEnv } from "../env";
+import { Logger } from "../lib/logger";
+import { Scheduler } from "../scheduler";
+import { IMetadataProvider } from "../types";
+import { getAxiosInstance } from "../utils";
 
 interface Router {
   entryPoints: string[];
@@ -23,12 +23,16 @@ interface Router {
 export class TraefikClient implements IMetadataProvider {
   private client: Axios;
   private cache: string[] = [];
+  private pollInterval: number;
 
   constructor(private logger: Logger) {
+    const traefikEnv = getTraefikEnv();
     this.client = getAxiosInstance(logger, {
-      baseURL: getEnvVars().traefikApiUrl,
+      baseURL: traefikEnv.TRAEFIK_API_URL,
     });
-    logger.setSettings({ name: "TraefikClient" });
+
+    this.logger = logger;
+    this.pollInterval = traefikEnv.TRAEFIK_POLL_INTERVAL;
   }
 
   testConnection = async () => {
@@ -82,9 +86,7 @@ export class TraefikClient implements IMetadataProvider {
   }) => {
     this.logger.info(
       "[Traefik]",
-      `Traefik doesn't support live events so we're polling every ${
-        getEnvVars().traefikPollInterval
-      } seconds`
+      `Traefik doesn't support live events so we're polling every ${this.pollInterval} seconds`
     );
 
     opts.scheduler.scheduleIntervalJob({
@@ -118,7 +120,7 @@ export class TraefikClient implements IMetadataProvider {
           toDelete.forEach((h) => opts.scheduleDeleteDnsRecord(h));
         }
       },
-      intervalTimeInSeconds: getEnvVars().traefikPollInterval,
+      intervalTimeInSeconds: this.pollInterval,
     });
   };
 }

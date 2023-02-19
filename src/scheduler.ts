@@ -1,6 +1,7 @@
-import type { Logger } from "tslog";
+import { Logger } from "./lib/logger";
 import { logError } from "./utils";
 
+// TODO: https://github.com/jakubroztocil/rrule
 type JobType = "AddDnsRecord" | "RemoveDnsRecord" | "PullResources" | "TraefikEvents";
 
 type Job = {
