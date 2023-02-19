@@ -70,8 +70,6 @@ export class TraefikClient implements IMetadataProvider {
 
     const hostsWithoutDuplicates = [...new Set(hosts)];
 
-    this.cache = hostsWithoutDuplicates;
-
     this.logger.debug("[Get Traefik Hosts]", hostsWithoutDuplicates.join(", "));
 
     return hostsWithoutDuplicates;
@@ -94,9 +92,13 @@ export class TraefikClient implements IMetadataProvider {
       jobId: "Traefik Events",
       fn: async () => {
         this.logger.debug("[Traefik Events]", "Polling...");
+
         const hosts = await this.getHosts();
+
         const toAdd = hosts.filter((h) => !this.cache.includes(h));
         const toDelete = this.cache.filter((h) => !hosts.includes(h));
+
+        this.cache = hosts;
 
         if (toAdd.length > 0) {
           this.logger.info(
