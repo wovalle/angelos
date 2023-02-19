@@ -62,13 +62,13 @@ const { syncResources, scheduleAddDnsRecord, scheduleDeleteDnsRecord } = makeOpe
   providerClient.subscribeToChanges({ scheduleAddDnsRecord, scheduleDeleteDnsRecord, scheduler });
 
   // Call SyncResources once
-  const syncResourcesJob = syncResources();
+  await syncResources();
 
   // Schedule SyncResources each hour
   scheduler.scheduleIntervalJob({
     type: "PullResources",
     jobId: "Sync Resources",
-    fn: () => syncResourcesJob,
+    fn: syncResources,
     intervalTimeInSeconds: 60 * 60,
   });
 })();
