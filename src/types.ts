@@ -1,21 +1,25 @@
-import { Scheduler } from "./scheduler";
+export type Host = {
+  id: string;
+  name: string;
+};
 
-type Host = string;
+export interface HostChange {
+  type: "add" | "remove";
+  host: Host;
+}
 
-export interface IMetadataProvider {
-  testConnection(): Promise<void>;
+type SubscribeCallback = (changes: HostChange[]) => void;
+
+export interface Provider {
+  getName(): string;
+  setup(): Promise<void>;
   getHosts(): Promise<Host[]>;
-  subscribeToChanges(opts: {
-    scheduleAddDnsRecord: (hostname: string) => void;
-    scheduleDeleteDnsRecord: (hostname: string) => void;
-    scheduler: Scheduler;
-  }): void;
+  subscribe(cb: SubscribeCallback): void;
 }
 
-interface ITargetFoo {}
-
-export interface ITarget {
-  testConnection(): Promise<void>;
-  setup(env: any): void;
-  pull(): Promise<ITargetFoo[]>
-}
+export type Target = {
+  getName(): string;
+  setup: () => Promise<void>;
+  getHosts: () => Promise<Host[]>;
+  apply: (changes: HostChange[]) => Promise<void>;
+};

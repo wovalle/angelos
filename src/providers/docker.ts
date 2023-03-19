@@ -1,7 +1,7 @@
 import Docker from "dockerode";
 import { getDockerEnv } from "../env";
 import { Logger } from "../lib/logger";
-import { IMetadataProvider } from "../types";
+import { HostChange, Provider } from "../types";
 
 interface DockerEvent {
   status: string;
@@ -25,7 +25,7 @@ interface DockerEvent {
   timeNano: BigInt;
 }
 
-export class DockerClient implements IMetadataProvider {
+export class DockerProvider implements Provider {
   private labelHostname: string;
   private labelEnable: string;
   private dockerClient: Docker;
@@ -40,7 +40,15 @@ export class DockerClient implements IMetadataProvider {
     this.logger = logger;
   }
 
-  testConnection = async () => {
+  getName() {
+    return "docker";
+  }
+
+  async setup(): Promise<void> {
+    const dockerEnv = getDockerEnv();
+    this.logger.info(`Docker Label Hostname=${dockerEnv.DOCKER_LABEL_HOSTNAME}`);
+    this.logger.info(`Docker Label Enable=${dockerEnv.DOCKER_LABEL_ENABLE}`);
+
     const containers = await this.dockerClient.listContainers();
 
     if (!containers || containers.length) {
@@ -52,40 +60,9 @@ export class DockerClient implements IMetadataProvider {
     }
 
     this.logger.info("[Docker Connection]", "Connection verified");
-  };
-
-  getContainers = async () => {
-    const containers = await this.dockerClient.listContainers();
-    const filteredContainer = containers.filter((c) => {
-      return (
-        this.getHost(c.Labels) && (this.labelEnable ? c.Labels[this.labelEnable] === "true" : true)
-      );
-    });
-
-    this.logger.debug(
-      "[Get Docker Containers]",
-      filteredContainer.map((c) => [c.Id, this.getHost(c.Labels)])
-    );
-
-    this.logger.silly("[Get Docker Containers Raw]", containers);
-
-    return filteredContainer;
-  };
-
-  getHost(labels: Record<string, string>) {
-    return labels[this.labelHostname];
   }
 
-  getHosts = async () => {
-    const containers = await this.getContainers();
-
-    return containers.map((c) => this.getHost(c.Labels));
-  };
-
-  subscribeToChanges = (opts: {
-    scheduleAddDnsRecord: (hostname: string) => void;
-    scheduleDeleteDnsRecord: (hostname: string) => void;
-  }) => {
+  subscribe(cb: (changes: HostChange[]) => void): void {
     this.dockerClient.getEvents(
       { filters: { event: ["start", "stop", "kill", "die"] } },
       (error, stream) => {
@@ -95,18 +72,47 @@ export class DockerClient implements IMetadataProvider {
 
         stream?.on("data", (data) => {
           const event = JSON.parse(data) as DockerEvent;
-          const hostname = this.getHost(event.Actor.Attributes);
+          const hostname = this.getHostName(event.Actor.Attributes);
 
           this.logger.info("[Docker Event]", event.status, hostname);
           this.logger.silly("[Docker Event]", event);
 
           if (event.status === "start") {
-            opts.scheduleAddDnsRecord(hostname);
+            cb([{ type: "add", host: { id: event.id, name: hostname } }]);
           } else {
-            opts.scheduleDeleteDnsRecord(hostname);
+            cb([{ type: "remove", host: { id: event.id, name: hostname } }]);
           }
         });
       }
     );
+  }
+
+  getContainers = async () => {
+    const containers = await this.dockerClient.listContainers();
+    const filteredContainer = containers.filter((c) => {
+      return (
+        this.getHostName(c.Labels) &&
+        (this.labelEnable ? c.Labels[this.labelEnable] === "true" : true)
+      );
+    });
+
+    this.logger.debug(
+      "[Get Docker Containers]",
+      filteredContainer.map((c) => [c.Id, this.getHostName(c.Labels)])
+    );
+
+    this.logger.silly("[Get Docker Containers Raw]", containers);
+
+    return filteredContainer;
   };
+
+  getHostName(labels: Record<string, string>) {
+    return labels[this.labelHostname];
+  }
+
+  async getHosts() {
+    const containers = await this.getContainers();
+
+    return containers.map((c) => ({ id: c.Id, name: this.getHostName(c.Labels) }));
+  }
 }

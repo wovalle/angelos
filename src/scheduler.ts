@@ -2,7 +2,12 @@ import { Logger } from "./lib/logger";
 import { logError } from "./utils";
 
 // TODO: https://github.com/jakubroztocil/rrule
-type JobType = "AddDnsRecord" | "RemoveDnsRecord" | "PullResources" | "TraefikEvents";
+type JobType =
+  | "AddDnsRecord"
+  | "RemoveDnsRecord"
+  | "PullResources"
+  | "TraefikEvents"
+  | "ApplyChanges";
 
 type Job = {
   type: JobType;
@@ -46,17 +51,22 @@ const makeScheduler = (logger: Logger) => {
         `Job with id="${opts.jobId}" has been scheduled and will be executed in ${opts.delayInSeconds} seconds`
       );
     },
-
     scheduleIntervalJob: (opts: {
       type: JobType;
       jobId: string;
       fn: Function;
       intervalTimeInSeconds: number;
+      triggerOnStart?: boolean;
     }) => {
       const timerId = setInterval(async () => {
         logger.info("[Run Job]", opts.type, `Job with id="${opts.jobId}" has been executed`);
         await opts.fn();
       }, opts.intervalTimeInSeconds * 1000);
+
+      if (opts.triggerOnStart) {
+        logger.info("[Run Job]", opts.type, `Job with id="${opts.jobId}" has been executed`);
+        opts.fn();
+      }
 
       jobsRegistry.set(opts.jobId, { type: opts.type, jobId: opts.jobId, timerId });
 
@@ -66,7 +76,6 @@ const makeScheduler = (logger: Logger) => {
         `Job with id="${opts.jobId}" has been scheduled every ${opts.intervalTimeInSeconds} seconds`
       );
     },
-
     removeJobIfExists: (opts: { type: JobType; jobId: string }) => {
       const job = jobsRegistry.get(opts.jobId);
 

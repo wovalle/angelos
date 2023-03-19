@@ -5,7 +5,7 @@ type ContainerMockData = {
   labels: Record<string, string>;
 };
 
-type RouterMockData = {
+export type RouterMockData = {
   status?: string;
   provider?: string;
   host: string | string[];
@@ -25,7 +25,6 @@ const getDockerMock = (data: ContainerMockData) => ({
   Command: "/init",
   Created: 1635347733,
   Ports: [
-    { PrivatePort: 5900, Type: "tcp" },
     { IP: "0.0.0.0", PrivatePort: 5800, PublicPort: 5800, Type: "tcp" },
     { IP: "::", PrivatePort: 5800, PublicPort: 5800, Type: "tcp" },
   ],
@@ -104,6 +103,7 @@ export const getCloudflareMock = ({ id, name, type }: DNSRecordMock): DNSRecord 
     managed_by_apps: false,
     managed_by_argo_tunnel: false,
     source: "primary",
+    managed_by_web3: false,
   },
   created_on: new Date().toUTCString(),
   modified_on: new Date().toUTCString(),
@@ -125,16 +125,21 @@ export const getCloudflareRecordsMock = (data: DNSRecordMock[]) => ({
 
 const mapBackTicks = (host: string) => "`" + host + "`";
 
-export const getTraefikMock = ({ status, provider, host }: RouterMockData) => ({
-  entryPoints: ["traefik"],
-  service: "api@internal",
-  rule: `Host(${Array.isArray(host) ? host.map(mapBackTicks).join(", ") : mapBackTicks(host)})`,
-  priority: 2147483646,
-  status: status ?? "active",
-  using: ["traefik"],
-  name: "api@internal",
-  provider: provider ?? "docker",
-});
+export const getTraefikMock = ({ status, provider, host }: RouterMockData) => {
+  const extractServiceName = (host: string) =>
+    host.split(".").length > 2 ? host.split(".")[0] : "@";
+  return {
+    entryPoints: ["traefik"],
+    service: Array.isArray(host)
+      ? host.map(extractServiceName).join(",")
+      : extractServiceName(host),
+    rule: `Host(${Array.isArray(host) ? host.map(mapBackTicks).join(", ") : mapBackTicks(host)})`,
+    priority: 2147483646,
+    status: status ?? "active",
+    using: ["traefik"],
+    name: "api@internal",
+    provider: provider ?? "docker",
+  };
+};
 
 export const getTraefikRecordsMock = (data: RouterMockData[]) => data.map((d) => getTraefikMock(d));
-

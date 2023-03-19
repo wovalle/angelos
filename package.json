@@ -9,7 +9,8 @@
     "tw": "jest src --watch",
     "build": "tsc",
     "start": "node -r @swc-node/register -r dotenv/config src;",
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "typecheck": "tsc -b"
   },
   "author": "",
   "license": "MIT",

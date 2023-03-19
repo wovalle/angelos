@@ -6,7 +6,7 @@ const validTargets = z.enum(["cloudflareDNS"]);
 
 const validExternalEnv = z.union([validProviders, validTargets]);
 
-const envSchema = z.object({
+const baseEnvSchema = z.object({
   PROVIDER: validProviders,
   LOG_LEVEL: z.enum(["silly", "trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
   DRY_RUN: z.boolean().default(false),
@@ -30,7 +30,7 @@ const traefikSchema = z.object({
   TRAEFIK_POLL_INTERVAL: z.number().default(600),
 });
 
-export const env = envSchema.parse(process.env);
+export const env = baseEnvSchema.parse(process.env);
 
 // can we make this more generic?
 export const getCloudflareDNSEnv = () => cloudflareDNSSchema.parse(process.env);
