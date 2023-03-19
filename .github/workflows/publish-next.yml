@@ -1,0 +1,50 @@
+name: Publish Next
+
+on:
+  push:
+    branches: [next]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v2
+      id: pnpm-install
+      with:
+        version: 7
+        run_install: true
+
+    - name: Build project
+      run: pnpm build
+
+    - name: Docker Login
+      run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io --username ${{ github.actor }} --password-stdin
+    
+    - name: Build image
+      run: |
+        docker build -t ghcr.io/wovalle/angelos:${VERSION} .
+      env:
+        VERSION: ${{ github.sha }}
+
+    - name: Tag next
+      run: |
+        docker tag ghcr.io/wovalle/angelos:${VERSION} ghcr.io/wovalle/angelos:next
+      env:
+        VERSION: ${{ github.sha }}
+    
+    - name: Deploy image
+      run: |
+        docker push --all-tags ghcr.io/wovalle/angelos
+      env:
+        VERSION: ${{ steps.semantic.outputs.new_release_version }}

@@ -3,6 +3,7 @@ FROM node:18-alpine as builder
 WORKDIR /usr/src/app
 
 # Install dependencies
+RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 
@@ -16,6 +17,7 @@ FROM node:18-alpine
 ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
+RUN npm install -g pnpm
 
 # TODO(v3): make configurable (or maybe multiple images?)
 ADD https://github.com/just-containers/s6-overlay/releases/download/v2.2.0.1/s6-overlay-amd64-installer /tmp/
