@@ -28,9 +28,9 @@ export class CloudflareDNSTarget implements Target {
   constructor(private logger: Logger) {
     const cfDnsEnv = getCloudflareDNSEnv();
 
-    this.token = cfDnsEnv.CLOUDFLARE_API_TOKEN;
-    this.zone = cfDnsEnv.CLOUDFLARE_ZONE_ID;
-    this.tunnelId = cfDnsEnv.CLOUDFLARE_TUNNEL_UUID;
+    this.token = cfDnsEnv.CLOUDFLARE_DNS_API_TOKEN;
+    this.zone = cfDnsEnv.CLOUDFLARE_DNS_ZONE_ID;
+    this.tunnelId = cfDnsEnv.CLOUDFLARE_DNS_TUNNEL_UUID;
     this.cache = [];
 
     this.client = getAxiosInstance(logger, {

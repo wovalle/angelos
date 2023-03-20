@@ -9,15 +9,18 @@ const validExternalEnv = z.union([validProviders, validTargets]);
 const baseEnvSchema = z.object({
   PROVIDER: validProviders,
   LOG_LEVEL: z.enum(["silly", "trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
-  DRY_RUN: z.boolean().default(false),
-  DELETE_DNS_RECORD_DELAY: z.number().default(300),
-  ADD_DNS_RECORD_DELAY: z.number().default(60),
+  DRY_RUN: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+  DELETE_DNS_RECORD_DELAY: z.string().default("300").transform(Number),
+  ADD_DNS_RECORD_DELAY: z.string().default("60").transform(Number),
 });
 
 const cloudflareDNSSchema = z.object({
-  CLOUDFLARE_ZONE_ID: z.string(),
-  CLOUDFLARE_API_TOKEN: z.string(),
-  CLOUDFLARE_TUNNEL_UUID: z.string().uuid(),
+  CLOUDFLARE_DNS_ZONE_ID: z.string(),
+  CLOUDFLARE_DNS_API_TOKEN: z.string(),
+  CLOUDFLARE_DNS_TUNNEL_UUID: z.string().uuid(),
 });
 
 const dockerSchema = z.object({
@@ -27,7 +30,7 @@ const dockerSchema = z.object({
 
 const traefikSchema = z.object({
   TRAEFIK_API_URL: z.string().url(),
-  TRAEFIK_POLL_INTERVAL: z.number().default(600),
+  TRAEFIK_POLL_INTERVAL: z.string().default("600").transform(Number),
 });
 
 export const env = baseEnvSchema.parse(process.env);
