@@ -141,7 +141,7 @@ export class TraefikProvider implements Provider {
       .flat()
       .reduce<Host[]>((acc, h) => {
         if (!acc.find((a) => a.name === h.name)) {
-          this.logger.warn("[Get Traefik Hosts]", `Duplicate host ${h.name} found, skipping...`);
+          this.logger.debug("[Get Traefik Hosts]", `Duplicate host ${h.name} found, skipping...`);
           acc.push(h);
         }
 
