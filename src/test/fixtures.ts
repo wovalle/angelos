@@ -1,21 +1,21 @@
-import { DNSRecord } from "@cloudflare/types";
+import { DNSRecord } from "@cloudflare/types"
 
 type ContainerMockData = {
-  id: string;
-  labels: Record<string, string>;
-};
+  id: string
+  labels: Record<string, string>
+}
 
 export type RouterMockData = {
-  status?: string;
-  provider?: string;
-  host: string | string[];
-};
+  status?: string
+  provider?: string
+  host: string | string[]
+}
 
 type DNSRecordMock = {
-  id?: string;
-  name: string;
-  type?: DNSRecord["type"];
-};
+  id?: string
+  name: string
+  type?: DNSRecord["type"]
+}
 
 const getDockerMock = (data: ContainerMockData) => ({
   Id: data.id,
@@ -82,10 +82,10 @@ const getDockerMock = (data: ContainerMockData) => ({
       Propagation: "rprivate",
     },
   ],
-});
+})
 
 export const getDockerContainersMock = (data: ContainerMockData[]) =>
-  data.map((d) => getDockerMock(d));
+  data.map((d) => getDockerMock(d))
 
 export const getCloudflareMock = ({ id, name, type }: DNSRecordMock): DNSRecord => ({
   id: id ?? name,
@@ -107,7 +107,7 @@ export const getCloudflareMock = ({ id, name, type }: DNSRecordMock): DNSRecord 
   },
   created_on: new Date().toUTCString(),
   modified_on: new Date().toUTCString(),
-});
+})
 
 export const getCloudflareRecordsMock = (data: DNSRecordMock[]) => ({
   result: data.map((d) => getCloudflareMock(d)),
@@ -121,13 +121,13 @@ export const getCloudflareRecordsMock = (data: DNSRecordMock[]) => ({
     total_count: data.length,
     total_pages: 1,
   },
-});
+})
 
-const mapBackTicks = (host: string) => "`" + host + "`";
+const mapBackTicks = (host: string) => "`" + host + "`"
 
 export const getTraefikMock = ({ status, provider, host }: RouterMockData) => {
   const extractServiceName = (host: string) =>
-    host.split(".").length > 2 ? host.split(".")[0] : "@";
+    host.split(".").length > 2 ? host.split(".")[0] : "@"
   return {
     entryPoints: ["traefik"],
     service: Array.isArray(host)
@@ -139,7 +139,104 @@ export const getTraefikMock = ({ status, provider, host }: RouterMockData) => {
     using: ["traefik"],
     name: "api@internal",
     provider: provider ?? "docker",
-  };
-};
+  }
+}
 
-export const getTraefikRecordsMock = (data: RouterMockData[]) => data.map((d) => getTraefikMock(d));
+export const getTraefikRecordsMock = (data: RouterMockData[]) => data.map((d) => getTraefikMock(d))
+
+export const getCloudflareTunnelsMock = () => ({
+  success: true,
+  messages: [],
+  errors: [],
+  result: [
+    {
+      id: "tunnel-1",
+      account_tag: "account",
+      created_at: "2023-01-25T11:24:38.313978Z",
+      deleted_at: null,
+      name: "tunnel-1-name",
+      connections: [
+        {
+          colo_name: "TXL",
+          uuid: "conn1",
+          id: "conn1",
+          is_pending_reconnect: false,
+          origin_ip: "1.1.1.1",
+          opened_at: "2023-03-23T00:37:59.386112Z",
+          client_id: "client_id",
+          client_version: "2023.2.1",
+        },
+        {
+          colo_name: "VIE",
+          uuid: "conn2",
+          id: "conn2",
+          is_pending_reconnect: false,
+          origin_ip: "1.1.1.1",
+          opened_at: "2023-03-23T00:47:28.246390Z",
+          client_id: "client_id",
+          client_version: "2023.2.1",
+        },
+      ],
+      conns_active_at: "2023-03-21T22:10:55.625648Z",
+      conns_inactive_at: null,
+      tun_type: "cfd_tunnel",
+      metadata: {},
+      status: "healthy",
+      remote_config: true,
+    },
+    {
+      id: "tunnel-2",
+      account_tag: "account_id",
+      created_at: "2022-11-28T12:43:32.011432Z",
+      deleted_at: "2022-11-28T14:50:09.627508Z",
+      name: "tunnel-2-name",
+      connections: [],
+      conns_active_at: null,
+      conns_inactive_at: "2022-11-28T14:50:09.627508Z",
+      tun_type: "cfd_tunnel",
+      metadata: {},
+      status: "down",
+      remote_config: false,
+    },
+  ],
+})
+
+type ServiceMock = [string, string]
+
+/**
+ * [
+          {
+            service: "http://internal.url",
+            hostname: "external.url",
+            originRequest: {},
+          },
+          {
+            service: "http_status:404",
+          },
+        ]
+  */
+export const getCloudflareTunnelConfigurationMock = (services: ServiceMock[]) => ({
+  success: true,
+  messages: [],
+  errors: [],
+  result: {
+    tunnel_id: "76c9f077-0cdb-44e3-8187-4cb19ee1c055",
+    version: 27,
+    config: {
+      ingress: services.map(([external, internal]) => ({
+        hostname: external,
+        service: internal,
+      })),
+      "warp-routing": {
+        enabled: false,
+      },
+    },
+    source: "cloudflare",
+    created_at: "2023-03-30T07:54:04.137936Z",
+  },
+})
+
+export const getCloudflareVerifyTokenMock = (status: string = "active") => ({
+  success: true,
+  result: { status },
+})

@@ -1,6 +1,6 @@
 import { Logger } from "../lib/logger";
 import { Target } from "../types";
-import { CloudflareDNSTarget } from "./cloudflareDns";
+import { CloudflareDNSTarget } from "./cloudflareLegacy";
 
 export const getActiveTargets = async (logger: Logger) => {
   const targets: Target[] = [];
