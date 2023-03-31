@@ -1,13 +1,6 @@
 import * as z from "zod"
 
-// TODO: dynamically load providers
-const validProviders = z.enum(["docker", "traefik"])
-const validTargets = z.enum(["cloudflareDNS"])
-
-const validExternalEnv = z.union([validProviders, validTargets])
-
 const baseEnvSchema = z.object({
-  PROVIDER: validProviders,
   LOG_LEVEL: z.enum(["silly", "trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
   DRY_RUN: z
     .string()

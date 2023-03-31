@@ -8,7 +8,7 @@ import {
   CloudflareTunnelConfiguration,
   cloudflareTunnelConfigurationSchema,
 } from "../lib/zodSchemas"
-import { CloudflareHost, HostChange, Target } from "../types"
+import { CloudflareMeta, Host, HostChange, Target } from "../types"
 import { getAxiosInstance } from "../utils"
 
 type TunnelJWT = {
@@ -17,30 +17,16 @@ type TunnelJWT = {
   s: string
 }
 
-// In Setup, get dns records and tunnel configuration, source of truth is tunnel configuration
-//
-
-export class CloudflareTunnel implements Target<CloudflareHost> {
+export class CloudflareTunnel implements Target<CloudflareMeta> {
   private client: Axios
-  private zone: string
-  private accountId: string
-  private tunnelId: string
-  private cachedDnsRecords: DNSRecord[]
   private logger: Logger
   private cachedConfiguration: CloudflareTunnelConfiguration | undefined
-  private targetReverseProxy: string
+
+  private constants = new Map<string, string>()
 
   constructor(logger: Logger) {
-    const cfDnsEnv = getCloudflareTunnelEnv()
-    const decodedToken = jwt<TunnelJWT>(cfDnsEnv.CLOUDFLARE_TUNNEL_JWT)
-
-    this.tunnelId = decodedToken.t
-    this.accountId = decodedToken.a
-    this.zone = cfDnsEnv.CLOUDFLARE_TUNNEL_ZONE_ID
-    this.targetReverseProxy = cfDnsEnv.CLOUDFLARE_TUNNEL_TARGET_SERVICE
-
-    this.cachedDnsRecords = []
     this.logger = logger.getSubLogger({ name: "CloudflareTunnel" })
+    const cfDnsEnv = getCloudflareTunnelEnv()
 
     this.client = getAxiosInstance(logger, {
       method: "get",
@@ -57,7 +43,30 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
     return "cloudflare-tunnel"
   }
 
+  private getConstant(key: string): string {
+    const value = this.constants.get(key)
+    if (!value) {
+      throw new Error(`Constant ${key} not set. Did you forget to call setup()?`)
+    }
+
+    return value
+  }
+
   async setup(): Promise<void> {
+    const cfDnsEnv = getCloudflareTunnelEnv()
+    let decodedToken: TunnelJWT
+
+    try {
+      decodedToken = jwt<TunnelJWT>(cfDnsEnv.CLOUDFLARE_TUNNEL_JWT, { header: true })
+    } catch (e) {
+      throw new Error(`Error decoding JWT: ${e instanceof Error ? e.message : e} `)
+    }
+
+    this.constants.set("tunnelId", decodedToken.t)
+    this.constants.set("accountId", decodedToken.a)
+    this.constants.set("zoneId", cfDnsEnv.CLOUDFLARE_TUNNEL_ZONE_ID)
+    this.constants.set("targetReverseProxy", cfDnsEnv.CLOUDFLARE_TUNNEL_TARGET_SERVICE)
+
     // check token
     await this.client
       .get<APIResponseBody<{ status: string }>>("user/tokens/verify")
@@ -76,7 +85,7 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
 
     // check tunnel
     await this.client
-      .get(`accounts/${this.accountId}/cfd_tunnel/${this.tunnelId}`)
+      .get(`accounts/${this.getConstant("accountId")}/cfd_tunnel/${this.getConstant("tunnelId")}`)
       .catch((e: any) => {
         this.logger.silly("[Tunnel Verify Raw Error]", e)
 
@@ -91,7 +100,7 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
 
   private async getDnsRecords(): Promise<DNSRecord[]> {
     const response = await this.client.get<APIResponseBody<DNSRecord[]>>(
-      `zones/${this.zone}/dns_records?type=CNAME&per_page=100`
+      `zones/${this.getConstant("zoneId")}/dns_records?type=CNAME&per_page=100`
     )
 
     // TODO: I'm avoiding pagination here
@@ -107,9 +116,12 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
   }
 
   private async getTunnelConfiguration(): Promise<CloudflareTunnelConfiguration> {
-    const response = await this.client.get<APIResponseBody>(
-      `accounts/${this.accountId}/cfd_tunnel/${this.tunnelId}/configurations`
+    const [_, getTunnelConfigurationUrl] = cloudflareEndpoints.getTunnelConfigurationForTunnelId(
+      this.getConstant("accountId"),
+      this.getConstant("tunnelId")
     )
+
+    const response = await this.client.get<APIResponseBody>(getTunnelConfigurationUrl)
 
     const configuration = cloudflareTunnelConfigurationSchema.safeParse(response.data.result)
 
@@ -128,51 +140,51 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
     return configuration.data
   }
 
-  async getHosts(): Promise<CloudflareHost[]> {
+  async getHosts(): Promise<Host<CloudflareMeta>[]> {
     const [dnsRecords, configuration] = await Promise.all([
       this.getDnsRecords(),
       this.getTunnelConfiguration(),
     ])
 
     // Reseting cache
-    this.cachedDnsRecords = dnsRecords
     this.cachedConfiguration = configuration
 
-    return configuration.config.ingress.map(({ service, hostname }) => {
-      if (!hostname) {
-        throw new Error("handle this")
-      }
+    return configuration.config.ingress
+      .filter(({ hostname }) => hostname)
+      .map(({ service, hostname }) => {
+        // TODO: check if this is the best way to do this
+        const externalHost = dnsRecords.find((h) => h.name === hostname)
 
-      // TODO: check if this is the best way to do this
-      const externalHost = dnsRecords.find((h) => h.name === hostname)
-
-      return {
-        name: hostname,
-        id: service,
-        meta: {
-          dnsRecordId: externalHost?.id,
-          accountId: this.accountId,
-          tunnelId: this.tunnelId,
-          zoneId: this.zone,
-        },
-      }
-    })
+        return {
+          name: hostname!,
+          id: service,
+          meta: {
+            dnsRecordId: externalHost?.id,
+          },
+        }
+      })
   }
 
-  async apply(operations: HostChange<CloudflareHost>[]): Promise<void> {
-    const [updateTunnelConfigurationMethod, updateTunnelConfigurationUrl] =
-      cloudflareEndpoints.updateTunnelConfigurationForTunnelId(this.accountId, this.tunnelId)
+  async apply(operations: HostChange<unknown, CloudflareMeta>[]): Promise<void> {
+    const zone = this.getConstant("zoneId")
+    const tunnel = this.getConstant("tunnelId")
+    const targetReverseProxy = this.getConstant("targetReverseProxy")
 
-    const [updateDnsRecordMethod, updateDnsRecordUrl] = cloudflareEndpoints.updateDnsRecordForZone(
-      this.zone
-    )
+    const [updateTunnelConfigurationMethod, updateTunnelConfigurationUrl] =
+      cloudflareEndpoints.updateTunnelConfigurationForTunnelId(
+        this.getConstant("accountId"),
+        this.getConstant("tunnelId")
+      )
+
+    const [updateDnsRecordMethod, updateDnsRecordUrl] =
+      cloudflareEndpoints.updateDnsRecordForZone(zone)
 
     if (!this.cachedConfiguration) {
       throw new Error("Cached configuration is undefined. Did you forget to call setup?")
     }
 
     for (const change of operations) {
-      const dnsRecordId = change.host.meta.dnsRecordId
+      const dnsRecordId = change.targetMeta?.dnsRecordId
 
       switch (change.type) {
         case "add":
@@ -183,7 +195,7 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
               ingress: [
                 ...this.cachedConfiguration!.config.ingress,
                 {
-                  service: this.targetReverseProxy, //change.host.id?,
+                  service: targetReverseProxy, // TODO: change.host.id?,
                   hostname: change.host.name,
                 },
               ],
@@ -207,14 +219,14 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
 
             this.logger.info(
               "[Tunnel Configuration Update]",
-              `Tunnel configuration was updated to route ${change.host.name} to ${this.targetReverseProxy}`
+              `Tunnel configuration was updated to route ${change.host.name} to ${targetReverseProxy}`
             )
           }
 
           if (dnsRecordId) {
             this.logger.info(
               "[DNS Record Create]",
-              `CNAME Record with name ${change.host.name} already exists in zone ${this.zone}`
+              `CNAME Record with name ${change.host.name} already exists in zone ${zone}`
             )
             continue
           }
@@ -222,7 +234,7 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
           const dnsRecordCreateData = {
             type: "CNAME",
             name: change.host.name,
-            content: `${this.tunnelId}.cfargotunnel.com`,
+            content: `${this.getConstant("tunnelId")}.cfargotunnel.com`,
             ttl: 1,
             priority: 10,
             proxied: true,
@@ -245,7 +257,7 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
 
             this.logger.info(
               "[DNS Record Create]",
-              `CNAME Record with name ${change.host.name} was created in zone ${this.zone}`
+              `CNAME Record with name ${change.host.name} was created in zone ${zone}`
             )
           }
           break
@@ -284,13 +296,13 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
           if (!dnsRecordId) {
             this.logger.info(
               "[DNS Record Delete]",
-              `CNAME Record with name ${change.host.name} was not found in zone ${this.zone}`
+              `CNAME Record with name ${change.host.name} was not found in zone ${zone}`
             )
             continue
           }
 
           const [deleteDnsMethod, deleteDnsUrl] = cloudflareEndpoints.deleteDnsRecordForZone(
-            this.zone,
+            zone,
             dnsRecordId
           )
 
@@ -309,7 +321,7 @@ export class CloudflareTunnel implements Target<CloudflareHost> {
 
             this.logger.info(
               "[DNS Record Delete]",
-              `CNAME Record with name ${change.host.name} was deleted in zone ${this.zone}`
+              `CNAME Record with name ${change.host.name} was deleted in zone ${zone}`
             )
           }
           break

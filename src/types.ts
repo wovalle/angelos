@@ -1,21 +1,18 @@
-export type Host = {
+export interface Host<Meta = unknown> {
   id: string
   name: string
-  meta?: unknown
+  meta?: Meta
 }
 
-export type CloudflareHost = Host & {
-  meta: {
-    dnsRecordId: string | undefined
-    tunnelId: string
-    accountId: string
-    zoneId: string
-  }
+export interface CloudflareMeta {
+  dnsRecordId: string | undefined
 }
 
-export interface HostChange<T = Host> {
+export interface HostChange<ProviderMeta = unknown, TargetMeta = unknown> {
   type: "add" | "remove"
-  host: T
+  host: Host
+  providerMeta?: ProviderMeta
+  targetMeta?: TargetMeta
 }
 
 type SubscribeCallback = (changes: HostChange[]) => void
@@ -27,11 +24,11 @@ export interface Provider {
   subscribe(cb: SubscribeCallback): void
 }
 
-export type Target<H = Host> = {
+export type Target<Meta = unknown> = {
   getName(): string
   setup: () => Promise<void>
-  getHosts: () => Promise<H[]>
-  apply: (changes: HostChange<H>[]) => Promise<void>
+  getHosts: () => Promise<Host<Meta>[]>
+  apply: (changes: HostChange<unknown, Meta>[]) => Promise<void>
 }
 
 export type EndpointTuple = ["get" | "post" | "put" | "delete", string]

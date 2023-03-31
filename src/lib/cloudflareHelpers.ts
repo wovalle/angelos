@@ -24,10 +24,12 @@ export const cloudflareEndpoints = {
     cloudflareEndpoints.baseDnsRecord.replace(":zoneId", zoneId).replace(":id", id),
   ],
 
-  getTunnelDetailsForTunnel: (accountId: string, tunnelId: string) =>
+  getTunnelDetailsForTunnel: (accountId: string, tunnelId: string): EndpointTuple => [
+    "get",
     cloudflareEndpoints.getTunnelDetails
       .replace(":account_id", accountId)
       .replace(":tunnel_id", tunnelId),
+  ],
 
   getTunnelConfigurationForTunnelId: (accountId: string, tunnelId: string): EndpointTuple => [
     "get",

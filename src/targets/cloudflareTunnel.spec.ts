@@ -1,4 +1,3 @@
-import { mockClear } from "jest-mock-extended"
 import { rest } from "msw"
 import { setupServer } from "msw/node"
 import { cloudflareEndpoints } from "../lib/cloudflareHelpers"
@@ -9,7 +8,7 @@ import {
   getCloudflareVerifyTokenMock,
 } from "../test/fixtures"
 import { addMswHandlerOnce, getLoggerMock } from "../test/helpers"
-import { CloudflareHost, Target } from "../types"
+import { CloudflareMeta, Target } from "../types"
 import { CloudflareTunnel } from "./cloudflareTunnel"
 
 const TUNNEL_ID = "foo_tunnel_id"
@@ -31,7 +30,7 @@ const mswServer = setupServer(
   }),
 
   rest.get(
-    cloudflareEndpoints.getTunnelDetailsForTunnel(ACCOUNT_ID, TUNNEL_ID),
+    cloudflareEndpoints.getTunnelDetailsForTunnel(ACCOUNT_ID, TUNNEL_ID)[1],
     (req, res, ctx) => {
       return res(ctx.json(getCloudflareTunnelsMock()))
     }
@@ -55,6 +54,7 @@ const mswServer = setupServer(
 
 describe("CloudflareTunnel", () => {
   const logger = getLoggerMock()
+  let target: Target<CloudflareMeta>
 
   beforeAll(() => {
     mswServer.listen({
@@ -66,7 +66,10 @@ describe("CloudflareTunnel", () => {
     mswServer.close()
   })
 
-  beforeEach(() => mswServer.resetHandlers())
+  beforeEach(() => {
+    mswServer.resetHandlers()
+    target = new CloudflareTunnel(logger)
+  })
 
   describe("when setup is called", () => {
     describe("and the token is invalid", () => {
@@ -75,8 +78,6 @@ describe("CloudflareTunnel", () => {
       })
 
       it("should throw an error", async () => {
-        const target = new CloudflareTunnel(logger)
-
         await expect(target.setup()).rejects.toThrowError("Error verifying token")
       })
     })
@@ -94,14 +95,16 @@ describe("CloudflareTunnel", () => {
 
     describe("and everything is valid", () => {
       it("it should not throw", async () => {
-        const target = new CloudflareTunnel(logger)
-
         await target.setup()
       })
     })
   })
 
   describe("when getHosts is called", () => {
+    beforeEach(async () => {
+      await target.setup()
+    })
+
     describe("and cloudflare does not return any records", () => {
       beforeEach(() => {
         addMswHandlerOnce(
@@ -112,45 +115,32 @@ describe("CloudflareTunnel", () => {
       })
 
       it("should return an empty array", async () => {
-        const target = new CloudflareTunnel(logger)
-
         await expect(target.getHosts()).resolves.toEqual([])
       })
     })
 
     describe("and cloudflare returns records", () => {
       it("should return the hosts", async () => {
-        const target = new CloudflareTunnel(logger)
-
         await expect(target.getHosts()).resolves.toEqual([
           {
             id: "http://angelos",
             name: "angelos.rocks",
             meta: {
-              accountId: ACCOUNT_ID,
               dnsRecordId: "@",
-              tunnelId: TUNNEL_ID,
-              zoneId: ZONE_ID,
             },
           },
           {
             id: "http://service-cf",
             name: "cf.angelos.rocks",
             meta: {
-              accountId: ACCOUNT_ID,
               dnsRecordId: "cf",
-              tunnelId: TUNNEL_ID,
-              zoneId: ZONE_ID,
             },
           },
           {
             id: "http://no-dns-record",
             name: "no-dns-record.angelos.rocks",
             meta: {
-              accountId: ACCOUNT_ID,
               dnsRecordId: undefined,
-              tunnelId: TUNNEL_ID,
-              zoneId: ZONE_ID,
             },
           },
         ])
@@ -159,13 +149,10 @@ describe("CloudflareTunnel", () => {
   })
 
   describe("when apply is called", () => {
-    let target: Target<CloudflareHost>
-
     beforeEach(async () => {
-      target = new CloudflareTunnel(logger)
       await target.setup()
-
-      mockClear(logger)
+      // To clear mock calls from setup
+      logger.info.mockClear()
     })
 
     describe("when there are no changes", () => {
@@ -179,7 +166,6 @@ describe("CloudflareTunnel", () => {
       describe("and the service has a dns record", () => {
         beforeEach(() => {
           // Existing dns records
-
           addMswHandlerOnce(
             mswServer,
             cloudflareEndpoints.getDnsRecordsForZone(ZONE_ID),
@@ -195,22 +181,14 @@ describe("CloudflareTunnel", () => {
         })
 
         it("should add the service to the tunnel configuration", async () => {
-          // Update dns records and tunnel configuration
-          await target.getHosts()
-
           await target.apply([
             {
               type: "add",
               host: {
                 id: "new",
                 name: "new.angelos.rocks",
-                meta: {
-                  accountId: ACCOUNT_ID,
-                  dnsRecordId: "new",
-                  tunnelId: TUNNEL_ID,
-                  zoneId: ZONE_ID,
-                },
               },
+              targetMeta: { dnsRecordId: "new" },
             },
           ])
 
@@ -237,7 +215,6 @@ describe("CloudflareTunnel", () => {
           )
 
           // Update dns record
-
           addMswHandlerOnce(mswServer, cloudflareEndpoints.updateDnsRecordForZone(ZONE_ID), {
             success: true,
           })
@@ -251,10 +228,7 @@ describe("CloudflareTunnel", () => {
                 id: "new",
                 name: "new.angelos.rocks",
                 meta: {
-                  accountId: ACCOUNT_ID,
                   dnsRecordId: undefined,
-                  tunnelId: TUNNEL_ID,
-                  zoneId: ZONE_ID,
                 },
               },
             },
@@ -292,21 +266,15 @@ describe("CloudflareTunnel", () => {
         })
 
         it("should remove the service from the tunnel configuration and the dns record", async () => {
-          // Update dns records and tunnel configuration
-          await target.getHosts()
-
           await target.apply([
             {
               type: "remove",
               host: {
                 id: "http://angelos",
                 name: "angelos.rocks",
-                meta: {
-                  accountId: ACCOUNT_ID,
-                  dnsRecordId: "@",
-                  tunnelId: TUNNEL_ID,
-                  zoneId: ZONE_ID,
-                },
+              },
+              targetMeta: {
+                dnsRecordId: "@",
               },
             },
           ])
@@ -326,50 +294,45 @@ describe("CloudflareTunnel", () => {
       })
 
       describe("and the service does not have a dns record", () => {
-        describe("and the service does not have a dns record", () => {
-          beforeEach(() => {
-            // Update tunnel configuration
-            addMswHandlerOnce(
-              mswServer,
-              cloudflareEndpoints.updateTunnelConfigurationForTunnelId(ACCOUNT_ID, TUNNEL_ID),
-              { success: true }
-            )
+        beforeEach(() => {
+          // Update tunnel configuration
+          addMswHandlerOnce(
+            mswServer,
+            cloudflareEndpoints.updateTunnelConfigurationForTunnelId(ACCOUNT_ID, TUNNEL_ID),
+            { success: true }
+          )
 
-            // Update dns record
-            addMswHandlerOnce(mswServer, cloudflareEndpoints.updateDnsRecordForZone(ZONE_ID), {
-              success: true,
-            })
+          // Update dns record
+          addMswHandlerOnce(mswServer, cloudflareEndpoints.updateDnsRecordForZone(ZONE_ID), {
+            success: true,
           })
+        })
 
-          it("should remove the service from the tunnel configuration", async () => {
-            await target.apply([
-              {
-                type: "remove",
-                host: {
-                  id: "delete",
-                  name: "new.angelos.rocks",
-                  meta: {
-                    accountId: ACCOUNT_ID,
-                    dnsRecordId: undefined,
-                    tunnelId: TUNNEL_ID,
-                    zoneId: ZONE_ID,
-                  },
+        it("should remove the service from the tunnel configuration", async () => {
+          await target.apply([
+            {
+              type: "remove",
+              host: {
+                id: "delete",
+                name: "new.angelos.rocks",
+                meta: {
+                  dnsRecordId: undefined,
                 },
               },
-            ])
+            },
+          ])
 
-            expect(logger.info).toHaveBeenCalledTimes(2)
-            expect(logger.info).toHaveBeenNthCalledWith(
-              1,
-              "[Tunnel Configuration Update]",
-              "Tunnel configuration was updated to remove host new.angelos.rocks"
-            )
-            expect(logger.info).toHaveBeenNthCalledWith(
-              2,
-              "[DNS Record Delete]",
-              "CNAME Record with name new.angelos.rocks was not found in zone foo_zone_id"
-            )
-          })
+          expect(logger.info).toHaveBeenCalledTimes(2)
+          expect(logger.info).toHaveBeenNthCalledWith(
+            1,
+            "[Tunnel Configuration Update]",
+            "Tunnel configuration was updated to remove host new.angelos.rocks"
+          )
+          expect(logger.info).toHaveBeenNthCalledWith(
+            2,
+            "[DNS Record Delete]",
+            "CNAME Record with name new.angelos.rocks was not found in zone foo_zone_id"
+          )
         })
       })
     })

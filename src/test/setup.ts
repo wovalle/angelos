@@ -13,7 +13,7 @@ process.env.TRAEFIK_API_URL = "http://traefik.angelos.rocks/api"
   }
 */
 process.env.CLOUDFLARE_TUNNEL_JWT =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhIjoiZm9vX2FjY291bnRfaWQiLCJ0IjoiZm9vX3R1bm5lbF9pZCIsInMiOiJmb29fd2hhdGV2ZXJfdGhpc19tZWFucyJ9.AQ2pjrmQxiCTavObMMhVmIRdZ7zp800yT3pE_oRYLfs"
+  "eyJhIjoiZm9vX2FjY291bnRfaWQiLCJ0IjoiZm9vX3R1bm5lbF9pZCIsInMiOiJmb29fd2hhdGV2ZXJfdGhpc19tZWFucyIsImFsZyI6IkhTMjU2In0.e30.ZpdOKWktaTubSuWJKlg5fVt5iqHlUGej7-ko-0UDGfw"
 process.env.CLOUDFLARE_TUNNEL_API_TOKEN = "test"
 process.env.CLOUDFLARE_TUNNEL_ZONE_ID = "foo_zone_id"
 process.env.CLOUDFLARE_TUNNEL_TARGET_SERVICE = "internal_reverse_proxy"
