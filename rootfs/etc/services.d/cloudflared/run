@@ -1,2 +1,7 @@
 #!/usr/bin/with-contenv sh
-cloudflared tunnel run ${CLOUDFLARE_TUNNEL_UUID}
+
+if [ -n "$CLOUDFLARE_DNS_TUNNEL_UUID" ]; then
+    cloudflared tunnel run ${CLOUDFLARE_DNS_TUNNEL_UUID}
+elif [ -n "$CLOUDFLARE_TUNNEL_JWT" ]; then
+    cloudflared tunnel run --token ${CLOUDFLARE_TUNNEL_JWT}
+fi
