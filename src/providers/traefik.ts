@@ -30,7 +30,7 @@ export class TraefikProvider implements Provider {
   private previousHostCache: Host[] = []
   private pollInterval: number
 
-  constructor(private logger: Logger, private scheduler: Scheduler) {
+  constructor(private logger: Logger) {
     const traefikEnv = getTraefikEnv()
 
     this.client = getAxiosInstance(logger, {
@@ -65,13 +65,13 @@ export class TraefikProvider implements Provider {
     this.logger.info("[Traefik Test Connection]", "Connection verified")
   }
 
-  subscribe(cb: (changes: HostChange[]) => void): void {
+  subscribe(scheduler: Scheduler, cb: (changes: HostChange[]) => void): void {
     this.logger.info(
       "[Traefik]",
       `Traefik doesn't support live events so we're polling every ${this.pollInterval} seconds`
     )
 
-    this.scheduler.scheduleIntervalJob({
+    scheduler.scheduleIntervalJob({
       type: "TraefikEvents",
       jobId: "Traefik Events",
       fn: async () => {

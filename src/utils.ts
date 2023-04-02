@@ -1,35 +1,35 @@
-import axios, { AxiosRequestConfig } from "axios";
-import crypto from "node:crypto";
-import { Logger } from "./lib/logger";
+import axios, { AxiosRequestConfig } from "axios"
+import crypto from "node:crypto"
+import { Logger } from "./lib/logger"
 
 export const throwFatal = (logger: Logger, e: unknown, errorText?: string) => {
   if (axios.isAxiosError(e)) {
-    logger.fatal("[Axios Error]", e.response?.data);
+    logger.fatal("[Axios Error]", e.response?.data)
   } else {
-    logger.fatal(e);
+    logger.fatal(e)
   }
 
   if (errorText) {
-    const error = new Error(errorText);
-    logger.fatal(error);
+    const error = new Error(errorText)
+    logger.fatal(error)
   }
 
-  throw e;
-};
+  throw e
+}
 
 export const logError = (logger: Logger, e: unknown) => {
   if (axios.isAxiosError(e)) {
-    logger.error(e.response?.data);
+    logger.error(e.response?.data)
   } else {
-    logger.error(e);
+    logger.error(e)
   }
-};
+}
 
 export const getAxiosInstance = (logger: Logger, config?: AxiosRequestConfig<any> | undefined) => {
-  const instance = axios.create(config);
+  const instance = axios.create(config)
 
   instance.interceptors.request.use((config) => {
-    const requestId = crypto.randomUUID();
+    const requestId = crypto.randomUUID()
 
     logger.silly(
       "[Axios Request]",
@@ -38,10 +38,10 @@ export const getAxiosInstance = (logger: Logger, config?: AxiosRequestConfig<any
       config.baseURL,
       config.url,
       config.data
-    );
+    )
 
-    return { ...config, requestId };
-  });
+    return { ...config, requestId }
+  })
 
   instance.interceptors.response.use((response) => {
     logger.silly(
@@ -53,9 +53,9 @@ export const getAxiosInstance = (logger: Logger, config?: AxiosRequestConfig<any
       response.config.url,
       response.config.data,
       response.data
-    );
-    return response;
-  });
+    )
+    return response
+  })
 
-  return instance;
-};
+  return instance
+}

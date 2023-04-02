@@ -205,10 +205,10 @@ export class CloudflareTunnel implements Target<CloudflareMeta> {
           if (env.DRY_RUN) {
             this.logger.info(
               "[Tunnel Configuration Update]",
-              "Skipping Tunnel Configuration Update because Dry Run mode is true",
-              updateTunnelConfigurationUrl,
-              newTunnelConfiguration
+              "DRY_RUN",
+              `Tunnel configuration would be updated to route ${change.host.name} to ${targetReverseProxy}`
             )
+            this.logger.debug("[Tunnel Configuration Update]", newTunnelConfiguration)
             continue
           } else {
             await this.client.request({
@@ -234,7 +234,7 @@ export class CloudflareTunnel implements Target<CloudflareMeta> {
           const dnsRecordCreateData = {
             type: "CNAME",
             name: change.host.name,
-            content: `${this.getConstant("tunnelId")}.cfargotunnel.com`,
+            content: `${tunnel}.cfargotunnel.com`,
             ttl: 1,
             priority: 10,
             proxied: true,
@@ -243,10 +243,10 @@ export class CloudflareTunnel implements Target<CloudflareMeta> {
           if (env.DRY_RUN) {
             this.logger.info(
               "[DNS Record Create]",
-              "Skipping DNS Record Create because Dry Run mode is true",
-              updateDnsRecordMethod,
-              dnsRecordCreateData
+              "DRY_RUN",
+              `CNAME Record with name ${change.host.name} would be created in zone ${zone}`
             )
+            this.logger.debug("[DNS Record Create]", dnsRecordCreateData)
             continue
           } else {
             await this.client.request({
@@ -276,8 +276,8 @@ export class CloudflareTunnel implements Target<CloudflareMeta> {
           if (env.DRY_RUN) {
             this.logger.info(
               "[Tunnel Configuration Update]",
-              "Skipping Tunnel Configuration Update because Dry Run mode is true",
-              newConfiguration
+              "DRY_RUN",
+              `Tunnel configuration would be updated to remove ${change.host.name}`
             )
             continue
           } else {
@@ -309,8 +309,8 @@ export class CloudflareTunnel implements Target<CloudflareMeta> {
           if (env.DRY_RUN) {
             this.logger.info(
               "[DNS Record Delete]",
-              "Skipping DNS Record Delete because Dry Run mode is true",
-              deleteDnsUrl
+              "DRY_RUN",
+              `CNAME Record with name ${change.host.name} and id ${dnsRecordId} would be deleted in zone ${zone}`
             )
             continue
           } else {

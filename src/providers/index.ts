@@ -1,14 +1,13 @@
 import { Logger } from "../lib/logger"
-import { Scheduler } from "../scheduler"
 import { Provider } from "../types"
 import { DockerProvider } from "./docker"
 import { TraefikProvider } from "./traefik"
 
-export const getActiveProviders = async (logger: Logger, scheduler: Scheduler) => {
+export const getActiveProviders = async (logger: Logger) => {
   const providers: Provider[] = []
 
   if (process.env.TRAEFIK_API_URL) {
-    providers.push(new TraefikProvider(logger.getSubLogger({ name: "TraefikProvider" }), scheduler))
+    providers.push(new TraefikProvider(logger.getSubLogger({ name: "TraefikProvider" })))
   }
 
   if (process.env.DOCKER_API_URL) {
