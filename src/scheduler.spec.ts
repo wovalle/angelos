@@ -22,7 +22,7 @@ describe("Scheduler", () => {
     scheduler.scheduleJob({ type: "ApplyChanges", jobId: "test", fn, delayInSeconds: 100 })
     expect(fn).not.toHaveBeenCalled()
 
-    expect(scheduler.getJobs().get("test")).toEqual(
+    expect(scheduler.getJobs()[0]).toEqual(
       expect.objectContaining({
         type: "ApplyChanges",
         jobId: "test",
@@ -73,7 +73,7 @@ describe("Scheduler", () => {
       delayInSeconds: 100,
     })
 
-    expect(scheduler.getJobs().size).toEqual(2)
+    expect(scheduler.getJobs().length).toEqual(2)
 
     scheduler.removeJobIfExists({
       type: "ApplyChanges",
@@ -85,6 +85,6 @@ describe("Scheduler", () => {
       jobId: "test2",
     })
 
-    expect(scheduler.getJobs().size).toEqual(1)
+    expect(scheduler.getJobs().length).toEqual(1)
   })
 })

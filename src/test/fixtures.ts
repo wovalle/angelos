@@ -1,4 +1,4 @@
-import { DNSRecord } from "@cloudflare/types"
+import { DNSRecord } from "../types/cloudflare"
 
 type ContainerMockData = {
   id: string
@@ -107,6 +107,10 @@ export const getCloudflareMock = ({ id, name, type }: DNSRecordMock): DNSRecord 
   },
   created_on: new Date().toUTCString(),
   modified_on: new Date().toUTCString(),
+  data: undefined,
+  comment: undefined,
+  priority: undefined,
+  tags: undefined,
 })
 
 export const getCloudflareRecordsMock = (data: DNSRecordMock[]) => ({

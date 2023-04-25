@@ -1,4 +1,3 @@
-import type { APIResponseBody, DNSRecord } from "@cloudflare/types"
 import { Axios } from "axios"
 import jwt from "jwt-decode"
 import { env, getCloudflareTunnelEnv } from "../env"
@@ -9,6 +8,7 @@ import {
   cloudflareTunnelConfigurationSchema,
 } from "../lib/zodSchemas"
 import { CloudflareMeta, Host, HostChange, Target } from "../types"
+import type { APIResponseBody, DNSRecord } from "../types/cloudflare"
 import { getAxiosInstance } from "../utils"
 
 type TunnelJWT = {

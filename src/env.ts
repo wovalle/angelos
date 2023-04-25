@@ -8,6 +8,17 @@ const baseEnvSchema = z.object({
     .transform((v) => v === "true"),
   DELETE_DNS_RECORD_DELAY: z.string().default("300").transform(Number),
   ADD_DNS_RECORD_DELAY: z.string().default("60").transform(Number),
+  DB_ENABLED: z
+    .string()
+    .default("true")
+    .transform((v) => v === "true"),
+  UI_ENABLED: z
+    .string()
+    .default("true")
+    .transform((v) => v === "true"),
+
+  UI_PORT: z.string().default("3000").transform(Number),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 })
 
 const cloudflareLegacySchema = z.object({

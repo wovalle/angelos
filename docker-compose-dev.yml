@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  test:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - 3001:80
+
+  angelos:
+    # image: ghcr.io/wovalle/angelos:latest
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: angelos
+    ports:
+      - 3000:3000
+    environment:
+      - CLOUDFLARE_TUNNEL_ZONE_ID
+      - CLOUDFLARE_TUNNEL_JWT
+      - CLOUDFLARE_TUNNEL_API_TOKEN
+      - CLOUDFLARE_TUNNEL_TARGET_SERVICE
+      - TRAEFIK_API_URL=${TRAEFIK_API_URL}
+      - DRY_RUN=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./rootfs/cloudflared:/etc/cloudflared

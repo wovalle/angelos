@@ -3,7 +3,6 @@
     "parser": {
       "syntax": "typescript"
     },
-    "target": "es2020"
-  },
-  "sourceMaps": true
+    "target": "es2021"
+  }
 }

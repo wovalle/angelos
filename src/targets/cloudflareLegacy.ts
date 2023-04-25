@@ -1,22 +1,9 @@
-import type { DNSRecord } from "@cloudflare/types"
 import { Axios } from "axios"
 import { env, getCloudflareLegacyEnv } from "../env"
 import { Logger } from "../lib/logger"
 import { Host, HostChange, Target } from "../types"
+import type { APIResponseBody, DNSRecord } from "../types/cloudflare"
 import { getAxiosInstance } from "../utils"
-
-type CloudflareResponse<T> = {
-  success: boolean
-  errors: { code: number; message: string }
-  result: T
-  result_info: {
-    page: number
-    per_page: number
-    count: number
-    total_count: number
-    total_pages: number
-  }
-}
 
 export class CloudflareDNSTarget implements Target {
   private client: Axios
@@ -75,7 +62,7 @@ export class CloudflareDNSTarget implements Target {
 
   async getHosts(): Promise<Host[]> {
     const query = "type=CNAME&per_page=100"
-    const response = await this.client.get<CloudflareResponse<DNSRecord[]>>(
+    const response = await this.client.get<APIResponseBody<DNSRecord[]>>(
       `zones/${this.zone}/dns_records?${query}`
     )
 

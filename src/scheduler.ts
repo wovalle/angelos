@@ -8,8 +8,11 @@ export type Job = {
   type: JobType
   jobId: string
   timerId: NodeJS.Timeout
-  meta: Record<string, string>
+  meta?: Record<string, string>
 }
+
+export type JobWithOutTimerId = Omit<Job, "timerId">
+export type SubscribeFn = (job: JobWithOutTimerId) => void
 
 type ScheduleJobParams = {
   type: JobType
@@ -21,19 +24,23 @@ type ScheduleJobParams = {
 
 const makeScheduler = (logger: Logger) => {
   const jobsRegistry: Map<string, Job> = new Map()
+  const jobSubscribers: SubscribeFn[] = []
 
   const scheduleJob = (opts: ScheduleJobParams) => {
     const timerId = setTimeout(async () => {
       logger.info("[Run Job]", opts.type, `Job with id="${opts.jobId}" will be executed`)
 
       jobsRegistry.delete(opts.jobId)
+
       try {
         await opts.fn()
         logger.info(
           "[Run Job]",
           opts.type,
-          `Job with id="${opts.jobId}" has been executed successfully `
+          `Job with id="${opts.jobId}" has been executed successfully`
         )
+
+        jobSubscribers.forEach((fn) => fn(opts))
       } catch (e) {
         logger.error("[Run Job]", opts.type, `Job with id="${opts.jobId}" has failed`)
 
@@ -41,11 +48,17 @@ const makeScheduler = (logger: Logger) => {
       }
     }, opts.delayInSeconds * 1000)
 
+    const baseMeta = opts.meta ?? {}
+
     jobsRegistry.set(opts.jobId, {
       type: opts.type,
       jobId: opts.jobId,
       timerId,
-      meta: opts.meta ?? {},
+      meta: {
+        ...baseMeta,
+        delayInSeconds: opts.delayInSeconds.toString(),
+        toBeExecutedAt: new Date(Date.now() + opts.delayInSeconds * 1000).toISOString(),
+      },
     })
 
     logger.info(
@@ -70,6 +83,7 @@ const makeScheduler = (logger: Logger) => {
       const timerId = setInterval(async () => {
         logger.info("[Run Job]", opts.type, `Job with id="${opts.jobId}" has been executed`)
         await opts.fn()
+        jobSubscribers.forEach((fn) => fn(opts))
       }, opts.intervalTimeInSeconds * 1000)
 
       if (opts.triggerOnStart) {
@@ -77,11 +91,18 @@ const makeScheduler = (logger: Logger) => {
         opts.fn()
       }
 
+      const baseMeta = opts.meta ?? {}
+
       jobsRegistry.set(opts.jobId, {
         type: opts.type,
         jobId: opts.jobId,
         timerId,
-        meta: opts.meta ?? {},
+        meta: {
+          ...baseMeta,
+          interval: "true",
+          intervalTimeInSeconds: opts.intervalTimeInSeconds.toString(),
+          triggerOnStart: opts.triggerOnStart?.toString() ?? "false",
+        },
       })
 
       logger.info(
@@ -101,10 +122,13 @@ const makeScheduler = (logger: Logger) => {
       jobsRegistry.delete(opts.jobId)
       logger.info("[Remove Job]", opts.type, `Job with id="${opts.jobId}" has been aborted`)
     },
-    getJobs: () => jobsRegistry,
+    getJobs: () => Array.from(jobsRegistry.values()),
+    subscribe: (fn: SubscribeFn) => {
+      jobSubscribers.push(fn)
+    },
   }
 }
 
-type Scheduler = ReturnType<typeof makeScheduler>
+export type Scheduler = ReturnType<typeof makeScheduler>
 
-export { makeScheduler, Scheduler }
+export { makeScheduler }
