@@ -12,6 +12,7 @@ const baseEnvSchema = z.object({
     .string()
     .default("true")
     .transform((v) => v === "true"),
+  DB_PATH: z.string().optional(),
   UI_ENABLED: z
     .string()
     .default("true")

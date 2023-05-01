@@ -33,12 +33,12 @@ export class DbService {
   private static instance: DbService
 
   constructor(private logger: Logger) {
-    // TODO: make this configurable
-    const dbDir = join(process.cwd(), "rootfs", "angelos", "angelos.db")
+    const dbPath = env.DB_PATH ?? join(__dirname, "../", "../", "rootfs", "angelos")
+    this.logger.info("Initializing Database at ", dbPath)
 
     this.db = new Kysely<BetterSqlite>({
       dialect: new SqliteDialect({
-        database: new BetterSqlite(dbDir),
+        database: new BetterSqlite(join(dbPath, "angelos.db")),
       }),
     })
   }

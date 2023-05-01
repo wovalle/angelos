@@ -10,7 +10,6 @@ specifiers:
   '@swc/core': ^1.3.49
   '@swc/jest': ^0.2.24
   '@tabler/icons-react': ^2.15.0
-  '@tsconfig/node18': ^1.0.1
   '@types/better-sqlite3': ^7.6.3
   '@types/dockerode': ^3.3.14
   '@types/jest': ^29.4.0
@@ -29,7 +28,7 @@ specifiers:
   react: ^18.2.0
   react-dom: ^18.2.0
   tslog: ^4.7.4
-  typescript: ^5.0.4
+  typescript: 5.0.4
   webpack: ^5.79.0
   zod: ^3.21.4
 
@@ -55,7 +54,6 @@ devDependencies:
   '@swc/core': 1.3.49
   '@swc/jest': 0.2.24_@swc+core@1.3.49
   '@tabler/icons-react': 2.15.0_react@18.2.0
-  '@tsconfig/node18': 1.0.1
   '@types/better-sqlite3': 7.6.4
   '@types/dockerode': 3.3.16
   '@types/jest': 29.5.0
@@ -1341,10 +1339,6 @@ packages:
 
   /@tabler/icons/2.15.0:
     resolution: {integrity: sha512-6fwWrsLOqmeoDPii4O1/tG1lsaNoPigUEx8UrOgTLJ81HazbAy5rfypp7FN9/PGsal4VDU+hevOkaGkE6algTQ==}
-    dev: true
-
-  /@tsconfig/node18/1.0.1:
-    resolution: {integrity: sha512-sNFeK6X2ATlhlvzyH4kKYQlfHXE2f2/wxtB9ClvYXevWpmwkUT7VaSrjIN9E76Qebz8qP5JOJJ9jD3QoD/Z9TA==}
     dev: true
 
   /@types/babel__core/7.20.0:

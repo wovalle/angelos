@@ -7,7 +7,7 @@ import { Provider, Target } from "./types"
 
 describe("operations", () => {
   const logger = mock<Logger>()
-  const scheduler = mock<Scheduler>({ getJobs: jest.fn(() => new Map()) })
+  const scheduler = mock<Scheduler>({ getJobs: jest.fn(() => []) })
   const provider = mock<Provider>()
   const target = mock<Target>({ getName: jest.fn(() => "foo") })
 
@@ -160,7 +160,7 @@ describe("operations", () => {
           },
         })
 
-        jest.mocked(scheduler).getJobs.mockReturnValue(new Map([["foo", job]]))
+        jest.mocked(scheduler).getJobs.mockReturnValue([job])
         jest.mocked(provider).getHosts.mockResolvedValue([
           { id: "bar", name: "bar.rocks" },
           { id: "baz", name: "baz.rocks" },
