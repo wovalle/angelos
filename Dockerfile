@@ -26,10 +26,10 @@ ADD https://github.com/cloudflare/cloudflared/releases/download/2023.4.0/cloudfl
 RUN chmod +x /tmp/s6-overlay-amd64-installer && /tmp/s6-overlay-amd64-installer /
 RUN chmod +x /tmp/cloudflared-linux-amd64 && mv /tmp/cloudflared-linux-amd64 /usr/local/bin/cloudflared
 
-COPY package*.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 
-COPY --from=builder /usr/src/app/dist app/
+COPY --from=builder /usr/src/app/dist ./
 COPY rootfs /
 
 # Default vars

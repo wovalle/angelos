@@ -1,2 +1,2 @@
 #!/usr/bin/with-contenv sh
-/usr/local/bin/node /usr/src/app/app/
+/usr/local/bin/node /usr/src/app

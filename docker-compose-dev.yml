@@ -20,7 +20,7 @@ services:
       - CLOUDFLARE_TUNNEL_JWT
       - CLOUDFLARE_TUNNEL_API_TOKEN
       - CLOUDFLARE_TUNNEL_TARGET_SERVICE
-      - TRAEFIK_API_URL=${TRAEFIK_API_URL}
+      - TRAEFIK_API_URL
       - DRY_RUN=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

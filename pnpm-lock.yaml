@@ -9,7 +9,7 @@ specifiers:
   '@swc-node/register': ^1.6.2
   '@swc/core': ^1.3.49
   '@swc/jest': ^0.2.24
-  '@tabler/icons-react': ^2.15.0
+  '@tabler/icons-react': ^2.17.0
   '@types/better-sqlite3': ^7.6.3
   '@types/dockerode': ^3.3.14
   '@types/jest': ^29.4.0
@@ -38,6 +38,7 @@ dependencies:
   '@mantine/core': 6.0.7_v4ys55buv2xfswggmudr3yvt2i
   '@mantine/hooks': 6.0.7_react@18.2.0
   '@mantine/next': 6.0.7_wr2djpa44tnxon7d4oaxzkir4i
+  '@tabler/icons-react': 2.17.0_react@18.2.0
   axios: 1.3.5
   better-sqlite3: 8.3.0
   dockerode: 3.3.5
@@ -53,7 +54,6 @@ devDependencies:
   '@swc-node/register': 1.6.4_ypvyqhou6ecp5dvcx4hs3imvyq
   '@swc/core': 1.3.49
   '@swc/jest': 0.2.24_@swc+core@1.3.49
-  '@tabler/icons-react': 2.15.0_react@18.2.0
   '@types/better-sqlite3': 7.6.4
   '@types/dockerode': 3.3.16
   '@types/jest': 29.5.0
@@ -1327,19 +1327,19 @@ packages:
       jsonc-parser: 3.2.0
     dev: true
 
-  /@tabler/icons-react/2.15.0_react@18.2.0:
-    resolution: {integrity: sha512-yE+0kskRLANxB3ulkJ4UsouvMsNA+C5y58JjWgdHX8T4pLK/9FOtFPdGmZW2Z5SodC6XZCXH/uw0PqAy1I3/JA==}
+  /@tabler/icons-react/2.17.0_react@18.2.0:
+    resolution: {integrity: sha512-kuEW+qNwRqcK5iMl7qTapzX2NiMOwPg4Az01d+IZ1DIMwaZ7iKPJaIor2ihKFLPYrT9D5BZHXB8R5mSkw0FETg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0
     dependencies:
-      '@tabler/icons': 2.15.0
+      '@tabler/icons': 2.17.0
       prop-types: 15.8.1
       react: 18.2.0
-    dev: true
+    dev: false
 
-  /@tabler/icons/2.15.0:
-    resolution: {integrity: sha512-6fwWrsLOqmeoDPii4O1/tG1lsaNoPigUEx8UrOgTLJ81HazbAy5rfypp7FN9/PGsal4VDU+hevOkaGkE6algTQ==}
-    dev: true
+  /@tabler/icons/2.17.0:
+    resolution: {integrity: sha512-UeJaylOGNRhQKyDlgZfrQ3UPSGlfVQuXcmCsTYeXioKKepibW6VZ3H36Lo1jvBTBkQD2e9m+k2NxwkztOTXwrA==}
+    dev: false
 
   /@types/babel__core/7.20.0:
     resolution: {integrity: sha512-+n8dL/9GWblDO0iU6eZAwEIJVr5DWigtle+Q6HLOrh/pdbXOhOtqzq8VPPE2zvNJzSKY4vH/z3iT3tn0A3ypiQ==}
@@ -3466,6 +3466,7 @@ packages:
     hasBin: true
     dependencies:
       js-tokens: 4.0.0
+    dev: false
 
   /lru-cache/5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
@@ -3697,6 +3698,7 @@ packages:
   /object-assign/4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
+    dev: false
 
   /object-keys/0.4.0:
     resolution: {integrity: sha512-ncrLw+X55z7bkl5PnUvHwFK9FcGuFYo9gtjws2XtSzL+aZ8tm830P60WJ0dSmFVaSalWieW5MD7kEdnXda9yJw==}
@@ -3882,7 +3884,7 @@ packages:
       loose-envify: 1.4.0
       object-assign: 4.1.1
       react-is: 16.13.1
-    dev: true
+    dev: false
 
   /proxy-from-env/1.1.0:
     resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
@@ -3932,6 +3934,7 @@ packages:
 
   /react-is/16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
+    dev: false
 
   /react-is/18.2.0:
     resolution: {integrity: sha512-xWGDIW6x921xtzPkhiULtthJHoJvBbF3q26fzloPCK0hsvxtPVelvftw3zjbHWSkR2km9Z+4uxbDDK/6Zw9B8w==}
@@ -4012,6 +4015,7 @@ packages:
     engines: {node: '>=0.10.0'}
     dependencies:
       loose-envify: 1.4.0
+    dev: false
 
   /readable-stream/1.0.34:
     resolution: {integrity: sha512-ok1qVCJuRkNmvebYikljxJA/UEsKwLl2nI1OmaqAu4/UE+h0wKCHok4XkL/gvi39OacXvw59RJUOFUkDib2rHg==}
