@@ -219,26 +219,33 @@ type ServiceMock = [string, string]
           },
         ]
   */
-export const getCloudflareTunnelConfigurationMock = (services: ServiceMock[]) => ({
-  success: true,
-  messages: [],
-  errors: [],
-  result: {
-    tunnel_id: "76c9f077-0cdb-44e3-8187-4cb19ee1c055",
-    version: 27,
-    config: {
-      ingress: services.map(([external, internal]) => ({
-        hostname: external,
-        service: internal,
-      })),
-      "warp-routing": {
-        enabled: false,
+export const getCloudflareTunnelConfigurationMock = (
+  services: ServiceMock[],
+  withCatchAll: boolean = false
+) => {
+  const ingress = services.map(([external, internal]) => ({
+    hostname: external,
+    service: internal,
+  }))
+
+  return {
+    success: true,
+    messages: [],
+    errors: [],
+    result: {
+      tunnel_id: "76c9f077-0cdb-44e3-8187-4cb19ee1c055",
+      version: 27,
+      config: {
+        ingress: withCatchAll ? [...ingress, { service: "http_status:404" }] : ingress,
+        "warp-routing": {
+          enabled: false,
+        },
       },
+      source: "cloudflare",
+      created_at: "2023-03-30T07:54:04.137936Z",
     },
-    source: "cloudflare",
-    created_at: "2023-03-30T07:54:04.137936Z",
-  },
-})
+  }
+}
 
 export const getCloudflareVerifyTokenMock = (status: string = "active") => ({
   success: true,

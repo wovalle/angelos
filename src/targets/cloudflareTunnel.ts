@@ -183,21 +183,36 @@ export class CloudflareTunnel implements Target<CloudflareMeta> {
       throw new Error("Cached configuration is undefined. Did you forget to call setup?")
     }
 
+    this.logger.debug(
+      "[Cloudflare apply]",
+      "Applying operations:",
+      operations.map((o) => o.type).join(", ")
+    )
+
     for (const change of operations) {
       const dnsRecordId = change.targetMeta?.dnsRecordId
 
       switch (change.type) {
         case "add":
+          // TODO: tests
+          const currentIngressServices = this.cachedConfiguration!.config.ingress.filter(
+            (i) => i.hostname !== undefined
+          )
+          const currentIngressCatchAll = this.cachedConfiguration!.config.ingress.filter(
+            (i) => i.hostname === undefined
+          )
+
           const newTunnelConfiguration = {
             ...this.cachedConfiguration,
             config: {
               ...this.cachedConfiguration!.config,
               ingress: [
-                ...this.cachedConfiguration!.config.ingress,
+                ...currentIngressServices,
                 {
                   service: targetReverseProxy, // TODO: change.host.id?,
                   hostname: change.host.name,
                 },
+                ...currentIngressCatchAll,
               ],
             },
           }
