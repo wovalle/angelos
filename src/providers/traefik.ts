@@ -50,10 +50,10 @@ export class TraefikProvider implements Provider {
     this.logger.info(`Traefik Poll Interval=${traefikEnv.TRAEFIK_POLL_INTERVAL}`)
 
     await this.client.get("version").catch((e: any) => {
-      this.logger.silly("[Traefik Test Connection Raw Error]", e.response)
+      this.logger.silly("[Traefik Test Connection Raw Error]", e?.response)
 
       this.logger.fatal("[Traefik Test Connection]", "Error verifying connection", {
-        data: e.response.data,
+        data: e?.response?.data,
       })
 
       throw new Error("Error verifying traefik connection")
@@ -132,6 +132,11 @@ export class TraefikProvider implements Provider {
         const hosts = s.names.map((n) => ({ id: s.id, name: n }))
         return [...acc, ...hosts]
       }, [])
+
+    if (!routers.length) {
+      this.logger.error("[Get Traefik Hosts]", "No routers found")
+      throw new Error("No routers found")
+    }
 
     const hosts = routers
       .filter((r) => r.status === "enabled" && r.rule && r.provider !== "internal")
