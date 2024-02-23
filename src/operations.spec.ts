@@ -1,231 +1,187 @@
-import { rest } from "msw";
-import { setupServer } from "msw/node";
-import { makeOperations } from "./operations";
-import {
-  getCloudflareRecordsMock,
-  getDockerContainersMock,
-  getTraefikRecordsMock,
-} from "../test/fixtures";
+import { makeOperations } from "./operations"
 
-import { CloudflareApi } from "./cloudflare";
-import { DockerClient } from "./docker";
-import { TraefikClient } from "./traefik";
-import * as env from "./env";
-import { makeScheduler, Scheduler } from "./scheduler";
-import { Logger } from "tslog";
-import { mock } from "jest-mock-extended";
-
-jest.spyOn(env, "getEnvVars").mockImplementation(() => ({
-  traefikApiUrl: "http://traefik.angelos.com/api",
-  dockerLabelHostname: "angelos.hostname",
-  dockerLabelEnable: "angelos.enabled",
-  addDnsRecordDelay: 100,
-  deleteDnsRecordDelay: 100,
-  cloudflareApiToken: "cf-api-token",
-  cloudflareTunnelUrl: "uuid.cfargotunnel.com",
-  cloudflareTunnelId: "tunnel-uuid",
-  cloudflareZoneId: "cf-zone-id",
-  dryRun: false,
-  logLevel: expect.any(String),
-  provider: expect.any(String),
-  traefikPollInterval: 100,
-}));
-
-const mswServer = setupServer(
-  rest.get("https://api.cloudflare.com/client/v4/zones/:zoneId/dns_records", (req, res, ctx) => {
-    const records = getCloudflareRecordsMock([
-      { name: "angelos.rocks" },
-      { name: "cf.angelos.rocks" },
-    ]);
-    return res(ctx.json(records));
-  }),
-
-  rest.get("http://localhost/containers/json", (req, res, ctx) => {
-    const containers = getDockerContainersMock([
-      { id: "c1", labels: { "angelos.hostname": "angelos.rocks", "angelos.enabled": "true" } },
-      { id: "c2", labels: { "angelos.hostname": "a.angelos.rocks", "angelos.enabled": "true" } },
-      {
-        id: "c3",
-        labels: { "angelos.hostname": "disabled.angelos.rocks", "angelos.enabled": "false" },
-      },
-    ]);
-    return res(ctx.json(containers));
-  }),
-
-  rest.get("http://traefik.angelos.com/api/http/routers", (req, res, ctx) => {
-    const routers = getTraefikRecordsMock([
-      { host: "angelos.rocks", status: "enabled", provider: "docker" },
-      { host: ["a.angelos.rocks", "b.angelos.rocks"], status: "enabled", provider: "docker" },
-      { host: "c.angelos.rocks", status: "disabled", provider: "docker" },
-      { host: "d.angelos.rocks", status: "enabled", provider: "internal" },
-      { host: "e.angelos.rocks", status: "enabled", provider: "traefik" },
-    ]);
-
-    return res(ctx.json(routers));
-  })
-);
+import { mock } from "jest-mock-extended"
+import { Logger } from "./lib/logger"
+import { Job, Scheduler } from "./scheduler"
+import { Provider, Target } from "./types"
 
 describe("operations", () => {
-  let mockLogger = mock<Logger>();
-  let scheduler: Scheduler;
-  let cloudflareClient: CloudflareApi;
+  const logger = mock<Logger>()
+  const scheduler = mock<Scheduler>({ getJobs: jest.fn(() => []) })
+  const provider = mock<Provider>()
+  const target = mock<Target>({ getName: jest.fn(() => "foo") })
 
-  let operations: ReturnType<typeof makeOperations>;
-
-  beforeAll(() => {
-    mswServer.listen({
-      onUnhandledRequest: "error",
-    });
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => mswServer.resetHandlers());
-  afterAll(() => {
-    jest.useRealTimers();
-  });
+  let operations: ReturnType<typeof makeOperations>
 
   beforeEach(() => {
-    scheduler = makeScheduler(mockLogger);
-    cloudflareClient = new CloudflareApi(mockLogger);
-
     operations = makeOperations({
-      cloudflareClient,
-      logger: mockLogger,
-      providerClient: new DockerClient(mockLogger),
+      logger: logger,
       scheduler,
-      addDnsRecordDelay: 100,
-      deleteDnsRecordDelay: 100,
-    });
+      providers: [provider],
+      targets: [target],
+      addTargetRecordDelay: 0,
+      removeTargetRecordDelay: 0,
+    })
+  })
 
-    jest.clearAllTimers();
-  });
+  describe("syncResources", () => {
+    beforeAll(() => {
+      jest.useFakeTimers({
+        now: new Date("2020-01-01T00:00:00.000Z"),
+      })
+    })
 
-  describe("syncOperations", () => {
-    beforeEach(() => {
-      scheduler = mock<Scheduler>();
-      cloudflareClient = new CloudflareApi(mockLogger);
+    afterAll(() => {
+      jest.useRealTimers()
+    })
 
-      operations = makeOperations({
-        cloudflareClient,
-        logger: mockLogger,
-        providerClient: new DockerClient(mockLogger),
-        scheduler,
-        addDnsRecordDelay: 100,
-        deleteDnsRecordDelay: 100,
-      });
+    describe("when provider has records that target does not", () => {
+      it("should add records to target", async () => {
+        jest.mocked(provider).getHosts.mockResolvedValue([{ id: "foo", name: "foo.rocks" }])
+        jest.mocked(target).getHosts.mockResolvedValue([])
 
-      jest.clearAllTimers();
-    });
-    describe("Docker", () => {
-      it("should properly execute diff", async () => {
-        await operations.syncResources();
+        await operations.syncResources()
 
-        expect(scheduler.removeJobIfExists).toHaveBeenCalledWith(
-          expect.objectContaining({ type: "RemoveDnsRecord", jobId: "a.angelos.rocks" })
-        );
-        expect(scheduler.scheduleJob).toHaveBeenCalledWith(
-          expect.objectContaining({ type: "AddDnsRecord", jobId: "a.angelos.rocks" })
-        );
-        expect(scheduler.scheduleJob).toHaveBeenCalledWith(
-          expect.objectContaining({ type: "RemoveDnsRecord", jobId: "cf.angelos.rocks" })
-        );
-      });
-    });
+        expect(logger.info).toBeCalledWith("About to schedule 1 changes to foo:")
+        expect(logger.info).toBeCalledWith(" - add foo.rocks")
 
-    describe("Traefik", () => {
-      beforeEach(() => {
-        operations = makeOperations({
-          cloudflareClient: new CloudflareApi(mockLogger),
-          logger: mockLogger,
-          providerClient: new TraefikClient(mockLogger),
-          scheduler,
-          addDnsRecordDelay: 100,
-          deleteDnsRecordDelay: 100,
-        });
-      });
+        expect(scheduler.scheduleJob).toBeCalledWith({
+          delayInSeconds: 0,
+          fn: expect.any(Function),
+          jobId: "2020-01-01T00:00:00.000Z::foo::add::foo.rocks",
+          meta: {
+            hostName: "foo.rocks",
+            type: "add",
+          },
+          type: "ApplyChanges",
+        })
 
-      it("should properly execute diff", async () => {
-        await operations.syncResources();
+        // Call the inner function that is passed to scheduler.scheduleJob
+        await scheduler.scheduleJob.mock.lastCall?.[0].fn()
 
-        expect(scheduler.removeJobIfExists).toHaveBeenCalledWith(
-          expect.objectContaining({ type: "RemoveDnsRecord", jobId: "a.angelos.rocks" })
-        );
+        expect(target.apply).toBeCalledWith([
+          {
+            type: "add",
+            host: {
+              id: "foo",
+              name: "foo.rocks",
+            },
+          },
+        ])
+      })
+    })
 
-        expect(scheduler.scheduleJob).toHaveBeenCalledWith(
-          expect.objectContaining({ type: "AddDnsRecord", jobId: "a.angelos.rocks" })
-        );
-        expect(scheduler.scheduleJob).toHaveBeenCalledWith(
-          expect.objectContaining({ type: "AddDnsRecord", jobId: "b.angelos.rocks" })
-        );
-        expect(scheduler.scheduleJob).toHaveBeenCalledWith(
-          expect.objectContaining({ type: "AddDnsRecord", jobId: "e.angelos.rocks" })
-        );
-        expect(scheduler.scheduleJob).toHaveBeenCalledWith(
-          expect.objectContaining({ type: "RemoveDnsRecord", jobId: "cf.angelos.rocks" })
-        );
-      });
-    });
-  });
+    describe("when target has records that provider does not", () => {
+      it("should remove records from target", async () => {
+        jest.mocked(provider).getHosts.mockResolvedValue([])
+        jest.mocked(target).getHosts.mockResolvedValue([{ id: "foo", name: "foo.rocks" }])
 
-  describe("Scheduled Tasks", () => {
-    describe("scheduleAddDnsRecord", () => {
-      it("should remove pending delete jobs if scheduled", () => {
-        const host = "foo.angelos.com";
-        operations.scheduleDeleteDnsRecord(host);
+        await operations.syncResources()
 
-        expect(scheduler.getJobs().get(host)).toEqual(
-          expect.objectContaining({ jobId: host, type: "RemoveDnsRecord" })
-        );
+        expect(scheduler.scheduleJob).toBeCalledWith({
+          delayInSeconds: 0,
+          fn: expect.any(Function),
+          jobId: "2020-01-01T00:00:00.000Z::foo::remove::foo.rocks",
+          meta: {
+            hostName: "foo.rocks",
+            type: "remove",
+          },
+          type: "ApplyChanges",
+        })
 
-        operations.scheduleAddDnsRecord(host);
+        // Call the inner function that is passed to scheduler.scheduleJob
+        await scheduler.scheduleJob.mock.lastCall?.[0].fn()
 
-        expect(scheduler.getJobs().get(host)).toEqual(
-          expect.objectContaining({ jobId: host, type: "AddDnsRecord" })
-        );
-      });
-      it("should execute AddDnsRecordJob", async () => {
-        expect.assertions(1);
-        mswServer.use(
-          rest.post(
-            "https://api.cloudflare.com/client/v4/zones/cf-zone-id/dns_records",
-            (req, res, ctx) => {
-              expect(req.body).toEqual(
-                expect.objectContaining({ type: "CNAME", name: "foo.angelos.com" })
-              );
-              return res(ctx.json({}));
-            }
-          )
-        );
+        expect(target.apply).toBeCalledWith([
+          {
+            type: "remove",
+            host: {
+              id: "foo",
+              name: "foo.rocks",
+            },
+          },
+        ])
+      })
+    })
 
-        operations.scheduleAddDnsRecord("foo.angelos.com");
+    describe("when provider and target have records that are different", () => {
+      it("should update records in target", async () => {
+        jest.mocked(provider).getHosts.mockResolvedValue([{ id: "foo", name: "foo.rocks" }])
+        jest.mocked(target).getHosts.mockResolvedValue([{ id: "bar", name: "bar.rocks" }])
 
-        jest.runOnlyPendingTimers();
-      });
-    });
+        await operations.syncResources()
 
-    describe("scheduleDeleteDnsRecord", () => {
-      it("should execute DeleteDnsRecordJob if record was previously in cache ", async () => {
-        expect.assertions(1);
+        // Call the inner functions that are passed to scheduler.scheduleJob
+        scheduler.scheduleJob.mock.calls.forEach(async (call) => {
+          await call[0].fn()
+        })
 
-        mswServer.use(
-          rest.delete(
-            "https://api.cloudflare.com/client/v4/zones/cf-zone-id/dns_records/cf.angelos.rocks",
-            (req, res, ctx) => {
-              expect(req.body).toEqual(
-                expect.objectContaining({ type: "CNAME", name: "cf.angelos.rocks" })
-              );
-              return res(ctx.json({}));
-            }
-          )
-        );
+        expect(target.apply).toHaveBeenNthCalledWith(1, [
+          {
+            type: "add",
+            host: {
+              id: "foo",
+              name: "foo.rocks",
+            },
+          },
+        ])
 
-        // fill cache
-        await cloudflareClient.fetchCNameRecords();
+        expect(target.apply).toHaveBeenNthCalledWith(2, [
+          {
+            type: "remove",
+            host: {
+              id: "bar",
+              name: "bar.rocks",
+            },
+          },
+        ])
+      })
+    })
 
-        operations.scheduleDeleteDnsRecord("cf.angelos.rocks");
+    describe("when provider and target have records that are the same", () => {
+      it("should do nothing", async () => {
+        jest.mocked(provider).getHosts.mockResolvedValue([{ id: "foo", name: "foo.rocks" }])
+        jest.mocked(target).getHosts.mockResolvedValue([{ id: "foo", name: "foo.rocks" }])
 
-        jest.runOnlyPendingTimers();
-      });
-    });
-  });
-});
+        await operations.syncResources()
+
+        expect(scheduler.scheduleJob).not.toBeCalled()
+        expect(target.apply).not.toBeCalled()
+      })
+    })
+
+    describe("when provider and target have redundant records", () => {
+      it("should only apply not redundant changes", async () => {
+        const job = mock<Job>({
+          jobId: "foo",
+          meta: {
+            hostName: "foo.rocks",
+            type: "add",
+          },
+        })
+
+        jest.mocked(scheduler).getJobs.mockReturnValue([job])
+        jest.mocked(provider).getHosts.mockResolvedValue([
+          { id: "bar", name: "bar.rocks" },
+          { id: "baz", name: "baz.rocks" },
+        ])
+        jest.mocked(target).getHosts.mockResolvedValue([
+          { id: "foo", name: "foo.rocks" },
+          { id: "bar", name: "bar.rocks" },
+        ])
+
+        await operations.syncResources()
+
+        expect(scheduler.removeJobIfExists).toBeCalledWith(job)
+        expect(scheduler.scheduleJob).toHaveBeenCalledTimes(1)
+        expect(scheduler.scheduleJob).toBeCalledWith({
+          delayInSeconds: 0,
+          fn: expect.any(Function),
+          jobId: "2020-01-01T00:00:00.000Z::foo::add::baz.rocks",
+          meta: { hostName: "baz.rocks", type: "add" },
+          type: "ApplyChanges",
+        })
+      })
+    })
+  })
+})

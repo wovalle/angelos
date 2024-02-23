@@ -5,7 +5,7 @@
 
 module.exports = {
   clearMocks: true,
-  setupFiles: ["./test/setup.ts"],
+  setupFiles: ["./src/test/setup.ts"],
   transform: {
     "^.+\\.(t|j)sx?$": "@swc/jest",
   },

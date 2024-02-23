@@ -1,116 +1,55 @@
-import { TLogLevelName } from "tslog";
-import { pipeInto } from "ts-functional-pipe";
+import * as z from "zod"
 
-export enum Provider {
-  Docker = "docker",
-  Traefik = "traefik",
-}
+const baseEnvSchema = z.object({
+  LOG_LEVEL: z.enum(["silly", "trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
+  DRY_RUN: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+  DELETE_DNS_RECORD_DELAY: z.string().default("300").transform(Number),
+  ADD_DNS_RECORD_DELAY: z.string().default("60").transform(Number),
+  DB_ENABLED: z
+    .string()
+    .default("true")
+    .transform((v) => v === "true"),
+  DB_PATH: z.string().optional(),
+  UI_ENABLED: z
+    .string()
+    .default("true")
+    .transform((v) => v === "true"),
 
-export enum LogLevel {
-  Silly = "silly",
-  Trace = "trace",
-  Debug = "debug",
-  Info = "info",
-  Warn = "warn",
-  Error = "error",
-  Fatal = "fatal",
-}
+  UI_PORT: z.string().default("3000").transform(Number),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+})
 
-type TEnvVarObj<T = string | undefined> = { key: string; val: T };
+const cloudflareLegacySchema = z.object({
+  CLOUDFLARE_DNS_ZONE_ID: z.string(),
+  CLOUDFLARE_DNS_API_TOKEN: z.string(),
+  CLOUDFLARE_DNS_TUNNEL_UUID: z.string().uuid(),
+})
 
-export const required = (obj: TEnvVarObj) => {
-  if (!obj.val) {
-    throw new Error(`Environment Variable ${obj.key} was not found`);
-  }
+const cloudflareTunnelSchema = z.object({
+  CLOUDFLARE_TUNNEL_JWT: z.string(),
+  CLOUDFLARE_TUNNEL_API_TOKEN: z.string(),
+  CLOUDFLARE_TUNNEL_ZONE_ID: z.string(),
+  // TODO: need to rethink this, how am I routing traffic in the tunnel?
+  CLOUDFLARE_TUNNEL_TARGET_SERVICE: z.string(),
+})
 
-  return obj as { key: string; val: string };
-};
+const dockerSchema = z.object({
+  DOCKER_LABEL_HOSTNAME: z.string().default("angelos.hostname"),
+  DOCKER_LABEL_ENABLE: z.string().default("angelos.enabled"),
+})
 
-export const toBool = ({ key, val }: TEnvVarObj) => {
-  if (typeof val === "boolean") {
-    return val;
-  }
+const traefikSchema = z.object({
+  TRAEFIK_API_URL: z.string().url(),
+  TRAEFIK_POLL_INTERVAL: z.string().default("600").transform(Number),
+})
 
-  if (typeof val !== "string" || !["true", "false"].includes(val)) {
-    val;
-    throw new Error(`Invalid Boolean field: ${key}=${val}`);
-  }
+export const env = baseEnvSchema.parse(process.env)
 
-  return { key, val: val === "true" };
-};
-
-export const toNumber = ({ key, val }: TEnvVarObj) => {
-  if (typeof val === "number") {
-    return val;
-  }
-
-  if (typeof val !== "string" || Number.isNaN(Number.parseInt(val))) {
-    throw new Error(`Invalid Number field: ${key}=${val}`);
-  }
-
-  return { key, val: Number.parseInt(val) };
-};
-
-export function getEnvVar(key: string): TEnvVarObj {
-  return { key, val: process.env[key] };
-}
-
-export const def =
-  <T>(def: T) =>
-  ({ key, val }: TEnvVarObj) => ({ key, val: val ?? def });
-
-export const allowed =
-  <T>(allowed: T) =>
-  ({ key, val }: TEnvVarObj) => {
-    const values = Object.values(allowed);
-    if (!val || !values.includes(val)) {
-      throw new Error(`Invalid ${key}=${val}. Must be one of: ${values.join(", ")}`);
-    }
-    return { key, val };
-  };
-
-const validateTraefikApiUrl =
-  (provider: Provider) =>
-  ({ key, val }: TEnvVarObj) => {
-    if (provider === Provider.Traefik && !val) {
-      throw new Error(`${key} is required when PROVIDER=traefik`);
-    }
-    return { key, val };
-  };
-
-const validateUUID = ({ key, val }: TEnvVarObj<string>) => {
-  const isUUID = (s: string) =>
-    /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/gi.test(
-      s
-    );
-
-  if (!isUUID(val || "")) {
-    throw new Error(`${key} is not a valid UUID`);
-  }
-  return { val, key };
-};
-
-export const getEnvVars = () => {
-  const provider = pipeInto(getEnvVar("PROVIDER"), def("docker"), allowed(Provider))
-    .val as Provider;
-
-  return {
-    cloudflareZoneId: pipeInto(getEnvVar("CLOUDFLARE_ZONE_ID"), required).val,
-    cloudflareApiToken: pipeInto(getEnvVar("CLOUDFLARE_API_TOKEN"), required).val,
-    cloudflareTunnelId: pipeInto(getEnvVar("CLOUDFLARE_TUNNEL_UUID"), required, validateUUID).val,
-    dockerLabelHostname: pipeInto(getEnvVar("DOCKER_LABEL_HOSTNAME"), def("angelos.hostname")).val,
-    dockerLabelEnable: pipeInto(getEnvVar("DOCKER_LABEL_ENABLE"), def("angelos.enabled")).val,
-    logLevel: pipeInto(getEnvVar("LOG_LEVEL"), def("info"), allowed(LogLevel)).val as TLogLevelName,
-    dryRun: pipeInto(getEnvVar("DOCKER_LABEL_ENABLE"), def("false"), toBool).val,
-    deleteDnsRecordDelay: pipeInto(getEnvVar("DELETE_DNS_RECORD_DELAY"), def(`${60 * 5}`), toNumber)
-      .val,
-    addDnsRecordDelay: pipeInto(getEnvVar("ADD_DNS_RECORD_DELAY"), def(`${60 * 1}`), toNumber).val,
-    provider,
-    traefikApiUrl: pipeInto(getEnvVar("TRAEFIK_API_URL"), validateTraefikApiUrl(provider)).val,
-    traefikPollInterval: pipeInto(getEnvVar("TRAEFIK_POLL_INTERVAL"), def(`${60 * 10}`), toNumber)
-      .val,
-  };
-};
-
-
-
+// can we make this more generic?
+export const getCloudflareLegacyEnv = () => cloudflareLegacySchema.parse(process.env)
+export const getCloudflareTunnelEnv = () => cloudflareTunnelSchema.parse(process.env)
+export const getDockerEnv = () => dockerSchema.parse(process.env)
+export const getTraefikEnv = () => traefikSchema.parse(process.env)

@@ -1,13 +1,38 @@
-import { Scheduler } from "./scheduler";
+import { Scheduler } from "./scheduler"
 
-type Host = string;
+export type DefaultMeta = Record<string, unknown>
 
-export interface IMetadataProvider {
-  testConnection(): Promise<void>;
-  getHosts(): Promise<Host[]>;
-  subscribeToChanges(opts: {
-    scheduleAddDnsRecord: (hostname: string) => void;
-    scheduleDeleteDnsRecord: (hostname: string) => void;
-    scheduler: Scheduler;
-  }): void;
+export interface Host<Meta = DefaultMeta> {
+  id: string
+  name: string
+  meta?: Meta
 }
+
+export interface CloudflareMeta {
+  dnsRecordId: string | undefined
+}
+
+export interface HostChange<ProviderMeta = DefaultMeta, TargetMeta = DefaultMeta> {
+  type: "add" | "remove"
+  host: Host
+  providerMeta?: ProviderMeta
+  targetMeta?: TargetMeta
+}
+
+type SubscribeCallback = (changes: HostChange[]) => void
+
+export interface Provider {
+  getName(): string
+  setup(): Promise<void>
+  getHosts(): Promise<Host[]>
+  subscribe(scheduler: Scheduler, cb: SubscribeCallback): void
+}
+
+export type Target<Meta = DefaultMeta> = {
+  getName(): string
+  setup: () => Promise<void>
+  getHosts: () => Promise<Host<Meta>[]>
+  apply: (changes: HostChange<DefaultMeta, Meta>[]) => Promise<void>
+}
+
+export type EndpointTuple = ["get" | "post" | "put" | "delete", string]
